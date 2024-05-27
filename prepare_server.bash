@@ -80,6 +80,33 @@ fi
 
 # Conclusão
 echo -e "\nPreparação concluída. A máquina está pronta para restauração de dados de DVDs.\n"
+sleep 2
+# Verificar se o arquivo de configuração existe
+CONFIG_FILE="config.cfg"
+if [ ! -f "$CONFIG_FILE" ]; then
+        echo "Arquivo de configuração $CONFIG_FILE não encontrado. Criando novo arquivo de configuração..."
+
+    # Detectar o dispositivo de CD/DVD usando blkid
+    #DEVICE=$(blkid -o device | grep -m 1 "/dev/sr" || echo "/dev/sr0")
+    DEVICE=$(blkid | grep iso9660 | awk -F: '{print $1}')
+    # Solicitar ao usuário o ponto de montagem
+    read -p "Por favor, insira o ponto de montagem(padrão: /mnt/dvd): " MOUNT_POINT
+    MOUNT_POINT=${MOUNT_POINT:-/mnt/dvd}
+    # Determina o diretório de trabalho
+    WORKING_DIRECTORY="$HOME/media-data-restore/$(hostname)"
+
+    # Criar o arquivo de configuração com as configurações fornecidas
+    cat <<EOL > $CONFIG_FILE
+DEVICE="$DEVICE"
+FS_TYPE="iso9660"
+MOUNT_POINT="$MOUNT_POINT"
+WORKING_DIRECTORY="$WORKING_DIRECTORY"
+LOG_FILE="$WORKING_DIRECTORY/log.txt"
+EOL
+
+    echo "Arquivo de configuração $CONFIG_FILE criado com sucesso."
+fi
+
 
 #wget do productx em um git nosso
 #ldd productx
