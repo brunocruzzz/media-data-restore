@@ -51,7 +51,7 @@ sleep 2
 if ! dpkg -l | grep -q "libc6:i386" || ! dpkg -l | grep -q "libz1:i386" || ! dpkg -l | grep -q "zlib1g:i386" || ! dpkg -l | grep -q "libgcc-s1:i386" || ! dpkg -l | grep -q "libstdc++6:i386" || ! dpkg -l | grep -q "libgcc1:i386"; then
     echo "Algumas bibliotecas i386 necessárias não estão instaladas. Instalando..."
     # Instalar as bibliotecas necessárias
-    sudo apt install -y -qq libc6:i386 libz1:i386 libstdc++6:i386 libgcc1:i386 zlib1g:i386 libgcc-s1:i386 growisofs
+    sudo apt install -y -qq libc6:i386 libz1:i386 libstdc++6:i386 libgcc1:i386 zlib1g:i386 libgcc-s1:i386 growisofs nfs-common
     echo "Todas as bibliotecas i386 necessárias estão instaladas."
 else
     echo "Todas as bibliotecas i386 necessárias já estão instaladas."
@@ -75,7 +75,7 @@ if ./productx -v >/dev/null 2>&1; then
         echo "Executável productx instalado em /usr/local/bin"
     fi
 else
-    echo "Houve um problema ao verificar a versão do productx."
+    echo "Houve um problema ao verificar a versão do productx. Verifique se o programa encontra-se na máquina e configurado como executável"
 fi
 
 # Conclusão
@@ -90,8 +90,12 @@ if [ ! -f "$CONFIG_FILE" ]; then
     #DEVICE=$(blkid -o device | grep -m 1 "/dev/sr" || echo "/dev/sr0")
     DEVICE=$(blkid | grep iso9660 | awk -F: '{print $1}')
     # Solicitar ao usuário o ponto de montagem
-    read -p "Por favor, insira o ponto de montagem(padrão: /mnt/dvd): " MOUNT_POINT
+    read -p "Por favor, insira o ponto de montagem da mídia(padrão: /mnt/dvd): " MOUNT_POINT
     MOUNT_POINT=${MOUNT_POINT:-/mnt/dvd}
+    read -p "Por favor, insira o ponto de montagem da storage(padrão: /mnt/dados): " STORAGE_MOUNT
+    STORAGE_MOUNT=${STORAGE_MOUNT:-/mnt/dados}
+    read -p "Por favor, insira o ip da storage: " STORAGE_IP
+    STORAGE_IP=${STORAGE_IP:-""}
     # Determina o diretório de trabalho
     WORKING_DIRECTORY="$HOME/media-data-restore/$(hostname)"
 
@@ -100,6 +104,8 @@ if [ ! -f "$CONFIG_FILE" ]; then
 DEVICE="$DEVICE"
 FS_TYPE="iso9660"
 MOUNT_POINT="$MOUNT_POINT"
+STORAGE_MOUNT="$STORAGE_MOUNT"
+STORAGE_IP="$STORAGE_IP"
 WORKING_DIRECTORY="$WORKING_DIRECTORY"
 LOG_FILE="$WORKING_DIRECTORY/log.txt"
 EOL
