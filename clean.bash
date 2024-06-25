@@ -31,12 +31,19 @@ clean)
         echo "Ação cancelada."
     fi
     ;;
-prepare)
-    prepare
+log)
+    echo "CONFIRMA EXCLUSÃO DOS DADOS?(S/N)"
+    read -r confirmation1
+    if [[ $confirmation1 == "S" || $confirmation1 == "s" ]]; then
+        rm $LOG_FILE $READ_DVDS_FILE $LOG_DEPLOY
+        echo "Os logs foram apagados..."
+    else
+        echo "Ação cancelada."
+    fi
     ;;
 *)
     echo "Argumento inválido: $1"
-    echo "Uso: $0 <clean|prepare> [working_directory]:$WORKING_DIRECTORY"
+    echo "Uso: $0 <clean|log> [working_directory]:$WORKING_DIRECTORY"
     exit 1
     ;;
 esac
