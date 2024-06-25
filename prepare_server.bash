@@ -1,7 +1,10 @@
 #!/bin/bash
 
 # Script de Preparação para Restauração de Dados de DVDs
-# Autor: Bruno da Cruz Bueno
+# Autor(es): 
+# Bruno da Cruz Bueno
+# Jaqueline Murakami Kokitsu
+# Simone Cincotto Carvalho
 # Data: 23/05/2024
 
 # Descrição: Este script prepara a máquina para restauração de dados de DVDs,
@@ -110,9 +113,9 @@ MOUNT_POINT="$MOUNT_POINT"
 STORAGE_MOUNT="$STORAGE_MOUNT"
 STORAGE_IP="$STORAGE_IP"
 WORKING_DIRECTORY="$WORKING_DIRECTORY"
-LOG_FILE="$WORKING_DIRECTORY/log.txt"
-READ_DVDS_FILE="media-log.txt"
-LOG_DEPLOY="deploy-log.txt"
+LOG_FILE="$WORKING_DIRECTORY/logs/log.txt"
+READ_DVDS_FILE="$WORKING_DIRECTORY/logs/media-log.txt"
+LOG_DEPLOY="$WORKING_DIRECTORY/logs/deploy-log.txt"
 EOL
 
     echo "Arquivo de configuração $CONFIG_FILE criado com sucesso."

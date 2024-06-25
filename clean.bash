@@ -36,6 +36,7 @@ log)
     read -r confirmation1
     if [[ $confirmation1 == "S" || $confirmation1 == "s" ]]; then
         rm $LOG_FILE $READ_DVDS_FILE $LOG_DEPLOY
+        touch $LOG_FILE $READ_DVDS_FILE $LOG_DEPLOY
         echo "Os logs foram apagados..."
     else
         echo "Ação cancelada."
