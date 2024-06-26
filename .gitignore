@@ -1,5 +1,15 @@
+# Sensitive files
 *.cfg
 *.bkp
-*.txt
-**/
 log.txt
+*.log
+
+# Data files
+*.RAW*
+*.txt
+
+# ISO files
+*.ISO
+
+# Ignoring all directories
+**/

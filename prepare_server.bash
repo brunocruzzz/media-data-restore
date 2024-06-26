@@ -1,7 +1,10 @@
 #!/bin/bash
 
 # Script de Preparação para Restauração de Dados de DVDs
-# Autor: Bruno da Cruz Bueno
+# Autor(es): 
+# Bruno da Cruz Bueno
+# Jaqueline Murakami Kokitsu
+# Simone Cincotto Carvalho
 # Data: 23/05/2024
 
 # Descrição: Este script prepara a máquina para restauração de dados de DVDs,
@@ -88,6 +91,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
 
     # Detectar o dispositivo de CD/DVD usando blkid
     #DEVICE=$(blkid -o device | grep -m 1 "/dev/sr" || echo "/dev/sr0")
+    MACHINE_NAME=$(hostname)
     DEVICE=$(blkid | grep iso9660 | awk -F: '{print $1}')
     # Solicitar ao usuário o ponto de montagem
     read -p "Por favor, insira o ponto de montagem da mídia(padrão: /mnt/dvd): " MOUNT_POINT
@@ -97,17 +101,21 @@ if [ ! -f "$CONFIG_FILE" ]; then
     read -p "Por favor, insira o ip da storage: " STORAGE_IP
     STORAGE_IP=${STORAGE_IP:-""}
     # Determina o diretório de trabalho
-    WORKING_DIRECTORY="$HOME/media-data-restore/$(hostname)"
+    WORKING_DIRECTORY="$HOME/media-data-restore/$MACHINE_NAME"
+    
 
     # Criar o arquivo de configuração com as configurações fornecidas
     cat <<EOL > $CONFIG_FILE
+MACHINE_NAME="$MACHINE_NAME"
 DEVICE="$DEVICE"
 FS_TYPE="iso9660"
 MOUNT_POINT="$MOUNT_POINT"
 STORAGE_MOUNT="$STORAGE_MOUNT"
 STORAGE_IP="$STORAGE_IP"
 WORKING_DIRECTORY="$WORKING_DIRECTORY"
-LOG_FILE="$WORKING_DIRECTORY/log.txt"
+LOG_FILE="$WORKING_DIRECTORY/logs/log.txt"
+READ_DVDS_FILE="$WORKING_DIRECTORY/logs/media-log.txt"
+LOG_DEPLOY="$WORKING_DIRECTORY/logs/deploy-log.txt"
 EOL
 
     echo "Arquivo de configuração $CONFIG_FILE criado com sucesso."
