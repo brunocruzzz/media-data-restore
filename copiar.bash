@@ -44,7 +44,10 @@ while true; do
         echo -n "Insira o número identificador do DVD: "
         read -r dvd_number
         timestamp=$(date +"%Y%m%d_%H%M%S")
-        echo "ID: $dvd_number - UUID: $DVD_UUID - ID da execução: $timestamp" | tee -a "$LOG_FILE"
+        
+        message="ID: $dvd_number - UUID: $DVD_UUID - ID da execução: $timestamp"
+        createlog "$message" "$LOG_FILE"
+        #echo "ID: $dvd_number - UUID: $DVD_UUID - ID da execução: $timestamp" | tee -a "$LOG_FILE"
         
         ###########################################################################################################
         #VARIÁVEIS DE CONTROLE
@@ -72,7 +75,8 @@ while true; do
         ############################################################################################################
         catalog
         # Final outputs
-        echo "Fim da rodada $ok_local" | tee -a $LOG_FILE
+        #echo "Fim da rodada $ok_local" | tee -a $LOG_FILE
+        createlog "Fim da rodada $ok_local" $LOG_FILE
         #sudo umount $MOUNT_POINT
         ejetar_midia        
     else

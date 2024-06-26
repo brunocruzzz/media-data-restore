@@ -48,7 +48,7 @@ exibir_cabecalho() {
 }
 
 check_disk_space() {
-    local data_mount_point="$1"    
+    local data_mount_point="$1"
     local usage=$(df "$data_mount_point" | awk 'NR==2 {print $3}')
     local readable_usage=$(df -h "$data_mount_point" | awk 'NR==2 {print $3}')
     sleep 2
@@ -81,7 +81,7 @@ monta_device() {
         if sudo mount "$DEVICE" "$MOUNT_POINT" >/dev/null 2>&1; then
             echo "Dispositivo $DEVICE montado com sucesso em $MOUNT_POINT."
         else
-            echo "Falha ao montar o dispositivo $DEVICE em $MOUNT_POINT." | tee -a "$LOG_FILE"
+            createlog "Falha ao montar o dispositivo $DEVICE em $MOUNT_POINT." "$LOG_FILE"
             echo "Verifique se o DVD foi inserido corretamente..."
             exit 1
         fi
@@ -109,6 +109,9 @@ check_dvd() {
         exit 1
     fi
 
+    if [ ! -f "$READ_DVDS_FILE" ]; then
+        touch "$READ_DVDS_FILE"
+    fi
     # Check if the UUID is already in the read list
     if grep -q "$DVD_UUID" "$READ_DVDS_FILE"; then
         echo "ATENÇÃO!!! DVD com UUID $DVD_UUID foi registrado como lido/restaurado. Pressione q para sair ou espere para realizar a operação de cópia novamente..."
@@ -129,7 +132,7 @@ dispositivo_montado() {
 }
 
 copy_from() {
-    rm -rf $err_local    
+    rm -rf $err_local
     copy_start_time=$(date +%s)
     total_files=$(ls -1 "$MOUNT_POINT/product_raw/"*.RAW* 2>/dev/null | wc -l)
     echo "Copiando dados do DVD($total_files encontrados)..."
@@ -139,13 +142,13 @@ copy_from() {
     if [ $? -eq 0 ]; then
         copy_end_time=$(date +%s)
         copy_execution_time=$((copy_end_time - copy_start_time))
-        echo "Cópia do DVD realizada com sucesso de $DEVICE($copy_execution_time s)" | tee -a "$LOG_FILE"        
+        createlog "Cópia do DVD realizada com sucesso de $DEVICE($copy_execution_time s)" "$LOG_FILE"
         echo "DVD com UUID $DVD_UUID adicionado a lista de DVD's lidos."
         echo "$DVD_UUID" >>"$READ_DVDS_FILE"
     else
         copy_end_time=$(date +%s)
         copy_execution_time=$((copy_end_time - copy_start_time))
-        echo "A cópia $local foi mal-executada após $copy_execution_time s)" | tee -a "$LOG_FILE"
+        createlog "A cópia $local foi mal-executada após $copy_execution_time s)" "$LOG_FILE"
         mv "$local" "$err_local"
         echo "Diretório renomeado para $err_local devido a falha/erro durante a cópia"
         exit 1
@@ -212,7 +215,7 @@ EOF
     echo "OK"
     TAG="$min_date <--> $max_date"
     FTAG="$min_date"_"$max_date"
-    echo "Este DVD ($dvd_number) compreende o período $FTAG" | tee -a $LOG_FILE
+    createlog "Este DVD ($dvd_number) compreende o período $FTAG" "$LOG_FILE"
     move_end_time=$(date +%s)
     move_execution_time=$((move_end_time - move_start_time))
 
@@ -224,7 +227,7 @@ EOF
         num_error_files=$((total_files - total_dados))
         echo "Operação realizada com erro. Alguns arquivos não foram restaurados. $num_error_files arquivos faltantes/com problema."
     else
-        echo "$TAG | Dados catalogados com sucesso! $timestamp: $total_dados arquivos restaurados. $count arquivos vazios." | tee -a $LOG_FILE
+        createlog "$TAG | Dados catalogados com sucesso! $timestamp: $total_dados arquivos restaurados. $count arquivos vazios." "$LOG_FILE"
         catalog="$WORKING_DIRECTORY/catalog/$FTAG"
         mv "$local" "$catalog"
         echo "Apagando diretórios marcados com erro..."
@@ -279,7 +282,7 @@ process_var() {
         ;;
     *)
         prod="indefinido"
-        echo "$fn: Problemas ao encontrar o rótulo de identificação do dado." | tee -a "$LOG_FILE"
+        createlog "$fn: Problemas ao encontrar o rótulo de identificação do dado." "$LOG_FILE"
         ;;
     esac
 
@@ -293,7 +296,7 @@ process_var() {
         ;;
     *)
         cidade="indefinido"
-        echo "$fn: Problemas ao encontrar o rótulo de identificação do dado." | tee -a "$LOG_FILE"
+        createlog "$fn: Problemas ao encontrar o rótulo de identificação do dado." "$LOG_FILE"
         #mv "$fn" "../indefinido"
         ;;
     esac
@@ -329,13 +332,19 @@ data_deploy() {
     mkdir -p "$STORAGE_MOUNT_POINT/MACHINES/$MACHINE_NAME"
     MACHINE_FOLDER="$STORAGE_MOUNT_POINT/MACHINES/$MACHINE_NAME"
     #echo "||$from --------------------------------> $MACHINE_FOLDER||"
-    echo "Iniciando a transferência de dados de '$from' para '$MACHINE_FOLDER'."
-    #echo "DIRETORIO DE DEPLOY $MACHINE_FOLDER" | tee -a $LOG_DEPLOY
-    echo "Diretório de destino: $MACHINE_FOLDER" | tee -a $LOG_DEPLOY
+    createlog "Iniciando a transferência de dados de '$from' para '$MACHINE_FOLDER'." "$LOG_DEPLOY"
+    createlog "Diretório de destino: $MACHINE_FOLDER" "$LOG_DEPLOY"
     rsync -rh --info=progress2 $from $MACHINE_FOLDER
     if [ $? -eq 0 ]; then
-        echo "Transferência de dados concluída com sucesso para '$MACHINE_FOLDER'." | tee -a $LOG_DEPLOY
+        createlog "Transferência de dados concluída com sucesso para '$MACHINE_FOLDER'." "$LOG_DEPLOY"
     else
-        echo "Falha na transferência de dados para '$MACHINE_FOLDER'. Verifique os logs para mais detalhes." | tee -a $LOG_DEPLOY
+        createlog "Falha na transferência de dados para '$MACHINE_FOLDER'. Verifique os logs para mais detalhes." "$LOG_DEPLOY"
+        echo "Contate o suporte de TI."
     fi
+}
+createlog() {
+    local message="$1"
+    local logfile="$2"
+    echo $message
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $message" >> "$logfile"    
 }
