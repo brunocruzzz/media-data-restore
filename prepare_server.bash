@@ -92,7 +92,8 @@ if [ ! -f "$CONFIG_FILE" ]; then
     # Detectar o dispositivo de CD/DVD usando blkid
     #DEVICE=$(blkid -o device | grep -m 1 "/dev/sr" || echo "/dev/sr0")
     MACHINE_NAME=$(hostname)
-    DEVICE=$(blkid | grep iso9660 | awk -F: '{print $1}')
+    #DEVICE=$(blkid | grep iso9660 | awk -F: '{print $1}')
+    DEVICE=$(lsblk -o KNAME,PATH,TYPE | awk '$3 == "rom" {print $2}')
     # Solicitar ao usuário o ponto de montagem
     read -p "Por favor, insira o ponto de montagem da mídia(padrão: /mnt/dvd): " MOUNT_POINT
     MOUNT_POINT=${MOUNT_POINT:-/mnt/dvd}

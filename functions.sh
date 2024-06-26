@@ -56,6 +56,8 @@ check_disk_space() {
     local disk="/"
     # Get the available disk space in human-readable format
     available_space=$(df "$disk" | awk 'NR==2 {print $4}')
+    echo $available_space
+    echo $usage
     if [ "$available_space" -lt "$usage" ]; then
         echo "Espaço em disco insuficiente($readable_usage). Verifique se existem dados a serem catalogados e enviados e então, execute uma limpeza usando o comando:"
         echo "./clean.bash clean"

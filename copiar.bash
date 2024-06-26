@@ -18,7 +18,7 @@ handle_parameters "$@"
 echo "Preparando sistema..."
 echo "Montando o dispositivo $DEVICE em $MOUNT_POINT com o sistema de arquivos $FS_TYPE..."
 monta_device
-check_disk_space "$MOUNT_POINT"
+check_disk_space "$DEVICE"
 
 ###########################################################################################################
 #PREPARAÇÃO DO AMBIENTE
@@ -27,6 +27,7 @@ mkdir -p $WORKING_DIRECTORY
 mkdir -p $WORKING_DIRECTORY/catalog
 mkdir -p $WORKING_DIRECTORY/local
 mkdir -p $WORKING_DIRECTORY/outgoing
+mkdir -p $WORKING_DIRECTORY/logs
 chmod -R +w $WORKING_DIRECTORY
 
 sleep 2
