@@ -232,6 +232,7 @@ EOF
         createlog "$TAG | Dados catalogados com sucesso! $timestamp: $total_dados arquivos restaurados. $count arquivos vazios." "$LOG_FILE"
         catalog="$WORKING_DIRECTORY/catalog/$FTAG"
         mv "$local" "$catalog"
+        tree -d "$catalog"
         echo "Apagando diretórios marcados com erro..."
         rm -rf $err_local
         ./sending_data.bash "$catalog" "$FTAG" &
@@ -316,27 +317,28 @@ process_var() {
 monta_storage() {
     echo "Um processo de upload foi iniciado em segundo plano."
     echo "Confira os logs para verificação do envio"
-
+    umount $STORAGE_MOUNT_POINT
     #PREPARAÇÃO DO AMBIENTE
     # Verificar se o ponto de montagem existe, caso contrário, criar
     if [ ! -d "$STORAGE_MOUNT_POINT" ]; then
         echo "Criando ponto de montagem $STORAGE_MOUNT_POINT"
-        sudo mkdir -p "$STORAGE_MOUNT_POINT"
-        sudo mount -t nfs -o rw,sync,hard,intr "$STORAGE_IP":/mnt/BD-IPMet/Dados /mnt/BD-IPMet
+        sudo mkdir -p "$STORAGE_MOUNT_POINT"       
+        sudo mount -t nfs -o rw,sync,hard,intr "$STORAGE_IP":"$STORAGE_PATH" "$STORAGE_MOUNT_POINT"
     else
         echo "$STORAGE_MOUNT_POINT já está montado..."
+        tree -d $STORAGE_MOUNT_POINT
     fi
 }
 
 data_deploy() {
     local from=$1
     echo "Verificando o diretório $MACHINE_NAME em $STORAGE_MOUNT_POINT na storage para receber dados da máquina local..."
-    mkdir -p "$STORAGE_MOUNT_POINT/MACHINES/$MACHINE_NAME"
-    MACHINE_FOLDER="$STORAGE_MOUNT_POINT/MACHINES/$MACHINE_NAME"
+    sudo mkdir -p "$STORAGE_MOUNT_POINT"
+    MACHINE_FOLDER="$STORAGE_MOUNT_POINT"
     #echo "||$from --------------------------------> $MACHINE_FOLDER||"
     createlog "Iniciando a transferência de dados de '$from' para '$MACHINE_FOLDER'." "$LOG_DEPLOY"
     createlog "Diretório de destino: $MACHINE_FOLDER" "$LOG_DEPLOY"
-    rsync -rh --info=progress2 $from $MACHINE_FOLDER
+    sudo rsync -rh --info=progress2 $from $MACHINE_FOLDER
     if [ $? -eq 0 ]; then
         createlog "Transferência de dados concluída com sucesso para '$MACHINE_FOLDER'." "$LOG_DEPLOY"
     else

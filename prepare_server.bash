@@ -54,7 +54,7 @@ sleep 2
 if ! dpkg -l | grep -q "libc6:i386" || ! dpkg -l | grep -q "libz1:i386" || ! dpkg -l | grep -q "zlib1g:i386" || ! dpkg -l | grep -q "libgcc-s1:i386" || ! dpkg -l | grep -q "libstdc++6:i386" || ! dpkg -l | grep -q "libgcc1:i386"; then
     echo "Algumas bibliotecas i386 necessárias não estão instaladas. Instalando..."
     # Instalar as bibliotecas necessárias
-    sudo apt install -y -qq libc6:i386 libz1:i386 libstdc++6:i386 libgcc1:i386 zlib1g:i386 libgcc-s1:i386 growisofs nfs-common
+    sudo apt install -y -qq libc6:i386 libz1:i386 libstdc++6:i386 libgcc1:i386 zlib1g:i386 libgcc-s1:i386 growisofs nfs-common tree
     echo "Todas as bibliotecas i386 necessárias estão instaladas."
 else
     echo "Todas as bibliotecas i386 necessárias já estão instaladas."
@@ -76,13 +76,14 @@ if ./productx -v >/dev/null 2>&1; then
         # Atualizar o hash table dos comandos
         hash -r
         echo "Executável productx instalado em /usr/local/bin"
+        echo -e "\nPreparação concluída. A máquina está pronta para restauração de dados de DVDs.\n"
     fi
 else
     echo "Houve um problema ao verificar a versão do productx. Verifique se o programa encontra-se na máquina e configurado como executável"
 fi
 
 # Conclusão
-echo -e "\nPreparação concluída. A máquina está pronta para restauração de dados de DVDs.\n"
+
 sleep 2
 # Verificar se o arquivo de configuração existe
 CONFIG_FILE="config.cfg"
@@ -94,15 +95,24 @@ if [ ! -f "$CONFIG_FILE" ]; then
     MACHINE_NAME=$(hostname)
     #DEVICE=$(blkid | grep iso9660 | awk -F: '{print $1}')
     DEVICE=$(lsblk -o KNAME,PATH,TYPE | awk '$3 == "rom" {print $2}')
-    # Solicitar ao usuário o ponto de montagem
+    # Solicitar ao usuário o ponto de montagem    
     read -p "Por favor, insira o ponto de montagem da mídia(padrão: /mnt/dvd): " MOUNT_POINT
-    MOUNT_POINT=${MOUNT_POINT:-/mnt/dvd}
-    read -p "Por favor, insira o ponto de montagem da storage(padrão: /mnt/dados): " STORAGE_MOUNT
-    STORAGE_MOUNT=${STORAGE_MOUNT:-/mnt/dados}
+    MOUNT_POINT=${MOUNT_POINT:-"/mnt/dvd"}
+    # Determina o diretório de trabalho
+    CURRENT_DIR=$(pwd)
+    LOG_DIR="$CURRENT_DIR/logs"
+    LOG_FILE="$LOG_DIR/log.txt"
+    READ_DVDS_FILE="$LOG_DIR/media-log.txt"
+    LOG_DEPLOY="$LOG_DIR/deploy-log.txt"
+    touch $LOG_DEPLOY $LOG_FILE $READ_DVDS_FILE
+    WORKING_DIRECTORY="$HOME/media-data-restore/$MACHINE_NAME"
+    read -p "Por favor, insira o ponto de montagem da storage(padrão: /mnt/dados): " STORAGE_MOUNT_POINT
+    STORAGE_MOUNT_POINT=${STORAGE_MOUNT_POINT:-/mnt/dados}
     read -p "Por favor, insira o ip da storage: " STORAGE_IP
     STORAGE_IP=${STORAGE_IP:-""}
-    # Determina o diretório de trabalho
-    WORKING_DIRECTORY="$HOME/media-data-restore/$MACHINE_NAME"
+    read -p "Por favor, insira diretório para upload na storage(padrão: /mnt/BD-IPMet/Dados/projDir/data/bruto/MACHINES/): " STORAGE_PATH
+    STORAGE_PATH=${STORAGE_PATH:-"/mnt/BD-IPMet/Dados/projDir/data/bruto/MACHINES/"}
+    
     
 
     # Criar o arquivo de configuração com as configurações fornecidas
@@ -111,16 +121,25 @@ MACHINE_NAME="$MACHINE_NAME"
 DEVICE="$DEVICE"
 FS_TYPE="iso9660"
 MOUNT_POINT="$MOUNT_POINT"
-STORAGE_MOUNT="$STORAGE_MOUNT"
-STORAGE_IP="$STORAGE_IP"
 WORKING_DIRECTORY="$WORKING_DIRECTORY"
-LOG_FILE="$WORKING_DIRECTORY/logs/log.txt"
-READ_DVDS_FILE="$WORKING_DIRECTORY/logs/media-log.txt"
-LOG_DEPLOY="$WORKING_DIRECTORY/logs/deploy-log.txt"
+STORAGE_MOUNT_POINT="$STORAGE_MOUNT_POINT"
+STORAGE_IP="$STORAGE_IP"
+STORAGE_PATH="$STORAGE_PATH"
+LOG_FILE="$LOG_FILE"
+READ_DVDS_FILE="$READ_DVDS_FILE"
+LOG_DEPLOY="$LOG_DEPLOY"
 EOL
 
     echo "Arquivo de configuração $CONFIG_FILE criado com sucesso."
+else
+    echo "ATENÇÂO: Já existe um arquivo de configuração criado anteriormente. Verifique as informações contidas nele..."
+    echo "Caso esteja enfrentando problemas, execute os seguintes passos: "
+    echo "1--Apague ou renomeie o arquivo $CONFIG_FILE"
+    echo "2--Execute novamente este script: $0"
+    echo "3--Insira as informações solicitadas.(Contate a equipe de TI, se necessário)"
 fi
+
+echo "Fim do script de preparação."
 
 
 #wget do productx em um git nosso
