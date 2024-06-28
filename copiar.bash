@@ -36,7 +36,7 @@ while true; do
         # Obter o rótulo/UUID da mídia/imagem
         check_dvd
         echo "O rótulo da mídia/imagem é: $DVD_LABEL"
-        echo -n "Insira o número identificador do DVD: "
+        echo_color -en "$YELLOW" "Insira o número identificador do DVD: "
         read -r dvd_number
         timestamp=$(date +"%Y%m%d_%H%M%S")
         

@@ -55,7 +55,7 @@ handle_parameters() {
 exibir_cabecalho() {
     clear
     echo "--------------------------------------------------------"
-    echo_color "$BLUE" "      Sistema de restauração de dados de mídia!         "
+    echo_color -e "$BLUE" "      Sistema de restauração de dados de mídia!         "
     echo "--------------------------------------------------------"
 }
 
@@ -335,7 +335,7 @@ monta_storage() {
     # Verificar se o ponto de montagem existe, caso contrário, criar
     if [ ! -d "$STORAGE_MOUNT_POINT" ]; then
         echo "Criando ponto de montagem $STORAGE_MOUNT_POINT"
-        sudo mkdir -p "$STORAGE_MOUNT_POINT"       
+        sudo mkdir -p "$STORAGE_MOUNT_POINT/$MACHINE_NAME"     
         sudo mount -t nfs -o rw,sync,hard,intr "$STORAGE_IP":"$STORAGE_PATH" "$STORAGE_MOUNT_POINT"
     else
         echo "$STORAGE_MOUNT_POINT já está montado..."
@@ -345,9 +345,10 @@ monta_storage() {
 
 data_deploy() {
     local from=$1
-    echo "Verificando o diretório $MACHINE_NAME em $STORAGE_MOUNT_POINT na storage para receber dados da máquina local..."
-    sudo mkdir -p "$STORAGE_MOUNT_POINT"
-    MACHINE_FOLDER="$STORAGE_MOUNT_POINT"
+    MACHINE_FOLDER="$STORAGE_MOUNT_POINT/$MACHINE_NAME"
+    echo "Verificando o diretório $MACHINE_FOLDER em $STORAGE_MOUNT_POINT na storage para receber dados da máquina local..."
+    sudo mkdir -p "$MACHINE_FOLDER"
+    
     #echo "||$from --------------------------------> $MACHINE_FOLDER||"
     createlog "Iniciando a transferência de dados de '$from' para '$MACHINE_FOLDER'." "$LOG_DEPLOY"
     createlog "Diretório de destino: $MACHINE_FOLDER" "$LOG_DEPLOY"
@@ -356,7 +357,7 @@ data_deploy() {
         createlog "Transferência de dados concluída com sucesso para '$MACHINE_FOLDER'." "$LOG_DEPLOY"
     else
         createlog "Falha na transferência de dados para '$MACHINE_FOLDER'. Verifique os logs para mais detalhes." "$LOG_DEPLOY"
-        echo_color "$RED" "Contate o suporte de TI."
+        echo_color -en "$RED" "Contate o suporte de TI."
     fi
 }
 createlog() {
@@ -365,7 +366,9 @@ createlog() {
     echo $message
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $message" >> "$logfile"    
 }
-
+#==========================================================================================
+#COLOR PALLETE
+#==========================================================================================
 # Color codes
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -377,7 +380,13 @@ WHITE='\033[0;37m'
 RESET='\033[0m'
 
 echo_color(){
-    local color_code=$1
-    shift
-    echo -e "${color_code}$@${RESET}"
+    local params=$1
+    local color_code=$2
+    local output=$3
+     # Check if color code is provided
+    if [ -z "$color_code" ]; then
+        color_code=$RESET
+    fi
+
+    echo $params "${color_code}$output${RESET}"
 }

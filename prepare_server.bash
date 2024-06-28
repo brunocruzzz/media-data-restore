@@ -100,23 +100,24 @@ if [ ! -f "$CONFIG_FILE" ]; then
     MOUNT_POINT=${MOUNT_POINT:-"/mnt/dvd"}
     # Determina o diretório de trabalho
     CURRENT_DIR=$(pwd)
-    LOG_DIR="$CURRENT_DIR/logs"
-    mkdir -p "$LOG_DIR"
+    WORKING_DIRECTORY="$CURRENT_DIR/$MACHINE_NAME"
+    LOG_DIR="$CURRENT_DIR/logs"    
     LOG_FILE="$LOG_DIR/log.txt"
     READ_DVDS_FILE="$LOG_DIR/media-log.txt"
-    LOG_DEPLOY="$LOG_DIR/deploy-log.txt"    
-    touch $LOG_DEPLOY $LOG_FILE $READ_DVDS_FILE
-    WORKING_DIRECTORY="$CURRENT_DIR/$MACHINE_NAME"
+    LOG_DEPLOY="$LOG_DIR/deploy-log.txt"
+    # Determina o diretório de logs
+    mkdir -p "$LOG_DIR"
+    touch $LOG_DEPLOY $LOG_FILE $READ_DVDS_FILE    
     mkdir -p $WORKING_DIRECTORY
     mkdir -p $WORKING_DIRECTORY/catalog
     mkdir -p $WORKING_DIRECTORY/local
     mkdir -p $WORKING_DIRECTORY/outgoing
-    chmod -R +w $WORKING_DIRECTORY
+    chmod -R +w $CURRENT_DIR
     read -p "Por favor, insira o ponto de montagem da storage(padrão: /mnt/dados): " STORAGE_MOUNT_POINT
     STORAGE_MOUNT_POINT=${STORAGE_MOUNT_POINT:-/mnt/dados}
     read -p "Por favor, insira o ip da storage: " STORAGE_IP
     STORAGE_IP=${STORAGE_IP:-""}
-    read -p "Por favor, insira diretório para upload na storage(padrão: /mnt/BD-IPMet/Dados/projDir/data/bruto/MACHINES/): " STORAGE_PATH
+    read -p "Por favor, insira diretório para upload na storage(padrão: /mnt/BD-IPMet/Dados/projDir/data/bruto/MACHINES/[NOME_DA_MAQUINA]): " STORAGE_PATH
     STORAGE_PATH=${STORAGE_PATH:-"/mnt/BD-IPMet/Dados/projDir/data/bruto/MACHINES/"}
     
     # Criar o arquivo de configuração com as configurações fornecidas
