@@ -1,7 +1,6 @@
 CONFIG_FILE="config.cfg"
-source "$CONFIG_FILE"
 source functions.sh
-
+load_config
 # Verificar se pelo menos um argumento foi passado
 if [ $# -eq 0 ]; then
     echo "Uso: $0 deve conter a rodada de restauração a ser realizada..."    

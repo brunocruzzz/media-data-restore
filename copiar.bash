@@ -7,9 +7,9 @@
 # Simone Cincotto Carvalho
 # Data: 23/05/2024
 
-clear
 source functions.sh
-#clear
+load_config
+clear
 exibir_cabecalho
 ###########################################################################################################
 #TRATAMENTO DOS PARAMETROS DE ENTRADA
@@ -23,12 +23,6 @@ check_disk_space "$DEVICE"
 ###########################################################################################################
 #PREPARAÇÃO DO AMBIENTE
 ###########################################################################################################
-mkdir -p $WORKING_DIRECTORY
-mkdir -p $WORKING_DIRECTORY/catalog
-mkdir -p $WORKING_DIRECTORY/local
-mkdir -p $WORKING_DIRECTORY/outgoing
-mkdir -p $WORKING_DIRECTORY/logs
-chmod -R +w $WORKING_DIRECTORY
 
 sleep 2
 # Loop principal de leitura de dvd's

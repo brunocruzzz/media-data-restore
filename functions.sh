@@ -1,7 +1,19 @@
 #DEFINIÇÃO DAS FUNÇÕES
 # Verificar se o arquivo de configuração existe
 CONFIG_FILE="config.cfg"
-source "$CONFIG_FILE"
+# Function to load the configuration file
+load_config() {
+    if [[ -f "$CONFIG_FILE" ]]; then
+        # Source the configuration file
+        source "$CONFIG_FILE"
+        echo "Configuration file sourced successfully."
+        sleep 2
+    else
+        # Print an error message and exit        
+        echo -e "\n****Configuration file not found. Please run ./prepare_server.bash to create it.\n"
+        exit 1
+    fi
+}
 #LOG_FILE="log.txt"
 #Tratamento de parametros
 handle_parameters() {
@@ -43,7 +55,7 @@ handle_parameters() {
 exibir_cabecalho() {
     clear
     echo "--------------------------------------------------------"
-    echo "      Sistema de restauração de dados de mídia!         "
+    echo_color "$BLUE" "      Sistema de restauração de dados de mídia!         "
     echo "--------------------------------------------------------"
 }
 
@@ -157,6 +169,7 @@ copy_from() {
     fi
 }
 catalog() {
+    local $local=$1
     move_start_time=$(date +%s)
     echo "Catalogando os dados copiados localmente em...$local"
     count_indefinido=0
@@ -343,7 +356,7 @@ data_deploy() {
         createlog "Transferência de dados concluída com sucesso para '$MACHINE_FOLDER'." "$LOG_DEPLOY"
     else
         createlog "Falha na transferência de dados para '$MACHINE_FOLDER'. Verifique os logs para mais detalhes." "$LOG_DEPLOY"
-        echo "Contate o suporte de TI."
+        echo_color "$RED" "Contate o suporte de TI."
     fi
 }
 createlog() {
@@ -351,4 +364,20 @@ createlog() {
     local logfile="$2"
     echo $message
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $message" >> "$logfile"    
+}
+
+# Color codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[0;37m'
+RESET='\033[0m'
+
+echo_color(){
+    local color_code=$1
+    shift
+    echo -e "${color_code}$@${RESET}"
 }
