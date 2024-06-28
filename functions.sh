@@ -6,11 +6,11 @@ load_config() {
     if [[ -f "$CONFIG_FILE" ]]; then
         # Source the configuration file
         source "$CONFIG_FILE"
-        echo "Configuration file sourced successfully."
+        echo "Arquivo de configuração carregado com sucesso."
         sleep 2
     else
         # Print an error message and exit        
-        echo -e "\n****Configuration file not found. Please run ./prepare_server.bash to create it.\n"
+        echo -e "\n****Arquivo de configuração $CONFIG_FILE não encontrado. Por favor, execute ./prepare_server.bash para criá-lo.\n"
         exit 1
     fi
 }
