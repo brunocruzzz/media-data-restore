@@ -67,12 +67,10 @@ check_disk_space() {
 
     local disk="/"
     # Get the available disk space in human-readable format
-    available_space=$(df "$disk" | awk 'NR==2 {print $4}')
-    echo $available_space
-    echo $usage
+    available_space=$(df "$disk" | awk 'NR==2 {print $4}')    
     if [ "$available_space" -lt "$usage" ]; then
-        echo "Espaço em disco insuficiente($readable_usage). Verifique se existem dados a serem catalogados e enviados e então, execute uma limpeza usando o comando:"
-        echo "./clean.bash clean"
+        echo_color -e "$RED" "Espaço em disco insuficiente($readable_usage). Verifique se existem dados a serem catalogados e enviados e então, execute uma limpeza usando o comando:"
+        echo_color -e "$YELLOW""./clean.bash clean"
         exit 1
     fi
 }
@@ -96,7 +94,7 @@ monta_device() {
             echo "Dispositivo $DEVICE montado com sucesso em $MOUNT_POINT."
         else
             createlog "Falha ao montar o dispositivo $DEVICE em $MOUNT_POINT." "$LOG_FILE"
-            echo "Verifique se o DVD foi inserido corretamente..."
+            echo_color "$RED" "Verifique se o DVD foi inserido corretamente..."
             exit 1
         fi
     fi
@@ -128,7 +126,7 @@ check_dvd() {
     fi
     # Check if the UUID is already in the read list
     if grep -q "$DVD_UUID" "$READ_DVDS_FILE"; then
-        echo "ATENÇÃO!!! DVD com UUID $DVD_UUID foi registrado como lido/restaurado. Pressione q para sair ou espere para realizar a operação de cópia novamente..."
+        echo_color -e "$YELLOW" "ATENÇÃO!!! DVD com UUID $DVD_UUID já foi registrado como lido/restaurado anteriormente. Pressione q para sair ou aguarde para realizar a operação de cópia novamente..."
         # Verificar se o usuário pressionou Enter para encerrar o programa
         read -r -s -n 1 -t 5 input
         if [[ $input = "q" ]]; then
