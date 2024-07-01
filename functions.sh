@@ -1,3 +1,12 @@
+#!/bin/bash
+
+# Script de Preparação para Restauração de Dados de DVDs
+# Autor(es):
+# Bruno da Cruz Bueno
+# Jaqueline Murakami Kokitsu
+# Simone Cincotto Carvalho
+# Data: 23/05/2024
+
 #DEFINIÇÃO DAS FUNÇÕES
 # Verificar se o arquivo de configuração existe
 CONFIG_FILE="config.cfg"

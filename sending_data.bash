@@ -1,3 +1,12 @@
+#!/usr/bin/bash
+
+# Script de Preparação para Restauração de Dados de DVDs
+# Autor(es):
+# Bruno da Cruz Bueno
+# Jaqueline Murakami Kokitsu
+# Simone Cincotto Carvalho
+# Data: 23/05/2024
+
 CONFIG_FILE="config.cfg"
 source functions.sh
 load_config
