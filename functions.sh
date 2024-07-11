@@ -1,29 +1,37 @@
 #!/bin/bash
-
-# Script de Preparação para Restauração de Dados de DVDs
+###############################################################################
+# Script de Restauração de Dados de DVDs
+#
 # Autor(es):
-# Bruno da Cruz Bueno
-# Jaqueline Murakami Kokitsu
-# Simone Cincotto Carvalho
-# Data: 23/05/2024
+# - Bruno da Cruz Bueno
+# - Jaqueline Murakami Kokitsu
+# - Simone Cincotto Carvalho
+#
+# Descrição:
+# Arquivo de funções do script copiar.bash
+#
+# Data de Criação: 23/05/2024
+# Última Atualização: 04/07/2024
+#
+###############################################################################
 
-#DEFINIÇÃO DAS FUNÇÕES
-# Verificar se o arquivo de configuração existe
+# DEFINIÇÃO DAS FUNÇÕES
 CONFIG_FILE="config.cfg"
-# Function to load the configuration file
+
+# Função para carregar o arquivo de configuração
 load_config() {
     if [[ -f "$CONFIG_FILE" ]]; then
-        # Source the configuration file
+        # Carregar o arquivo de configuração
         source "$CONFIG_FILE"
         echo "Arquivo de configuração carregado com sucesso."
         sleep 2
     else
-        # Print an error message and exit        
-        echo -e "\n****Arquivo de configuração $CONFIG_FILE não encontrado. Por favor, execute ./prepare_server.bash para criá-lo.\n"
+        # Imprimir uma mensagem de erro e encerra o programa
+        echo_color -e "$RED" "\n****Arquivo de configuração $CONFIG_FILE não encontrado. Por favor, execute ./prepare_server.bash para criá-lo.\n"
         exit 1
     fi
 }
-#LOG_FILE="log.txt"
+
 #Tratamento de parametros
 handle_parameters() {
     # Verifica se pelo menos um argumento foi passado
@@ -38,6 +46,7 @@ handle_parameters() {
         case "$1" in
         "iso")
             echo "Restauração de dados de arquivo ISO. Desenvolvimento futuro..."
+            monta_iso $2
             exit 0
             ;;
         "media")
@@ -70,21 +79,25 @@ exibir_cabecalho() {
 
 check_disk_space() {
     local data_mount_point="$1"
-    local usage=$(df "$data_mount_point" | awk 'NR==2 {print $3}')
-    local readable_usage=$(df -h "$data_mount_point" | awk 'NR==2 {print $3}')
-    sleep 2
+    local required_space=$(df --block-size=1 "$data_mount_point" | awk 'NR==2 {print $3}')
+    local readable_required_space=$(df -h "$data_mount_point" | awk 'NR==2 {print $3}')
+    sleep 2 # Verificar se isso é realmente necessário
 
     local disk="/"
-    # Get the available disk space in human-readable format
-    available_space=$(df "$disk" | awk 'NR==2 {print $4}')    
-    if [ "$available_space" -lt "$usage" ]; then
-        echo_color -e "$RED" "Espaço em disco insuficiente($readable_usage). Verifique se existem dados a serem catalogados e enviados e então, execute uma limpeza usando o comando:"
-        echo_color -e "$YELLOW""./clean.bash clean"
+    local free_space=$(df --block-size=1 "$disk" | awk 'NR==2 {print $4}')
+    local readable_free_space=$(df -h "$disk" | awk 'NR==2 {print $4}')
+
+    if ((free_space < required_space)); then
+        echo_color -e "$RED" "Espaço em disco insuficiente ($readable_free_space). São necessários $readable_required_space.\n Verifique se existem dados a serem catalogados e enviados e então, execute uma limpeza usando o comando:"
+        echo_color -e "$YELLOW" "./clean.bash clean"
         exit 1
+    else
+        echo "Espaço em disco local suficiente: $readable_free_space disponível."
     fi
 }
 
 monta_device() {
+    #echo "Montando o dispositivo $DEVICE em $MOUNT_POINT com o sistema de arquivos $FS_TYPE..."
     sudo umount $MOUNT_POINT
     # Verificar se o ponto de montagem existe, caso contrário, criar
     if [ ! -d "$MOUNT_POINT" ]; then
@@ -103,12 +116,27 @@ monta_device() {
             echo "Dispositivo $DEVICE montado com sucesso em $MOUNT_POINT."
         else
             createlog "Falha ao montar o dispositivo $DEVICE em $MOUNT_POINT." "$LOG_FILE"
-            echo_color "$RED" "Verifique se o DVD foi inserido corretamente..."
+            echo_color -e "$RED" "Verifique se o DVD foi inserido corretamente..."
             exit 1
         fi
     fi
 }
-
+monta_iso() {
+    local iso=$1
+    sudo umount $MOUNT_POINT
+    # Verificar se o ponto de montagem existe, caso contrário, criar
+    if [ ! -d "$MOUNT_POINT" ]; then
+        echo "Criando ponto de montagem..."
+        sudo mkdir -p "$MOUNT_POINT"
+    fi
+    if sudo mount "$iso" "$MOUNT_POINT" >/dev/null 2>&1; then
+        echo "Dispositivo $DEVICE montado com sucesso em $MOUNT_POINT."
+    else
+        createlog "Falha ao montar o dispositivo $iso em $MOUNT_POINT." "$LOG_FILE"
+        echo_color -e "$RED" "Verifique se o DVD foi inserido corretamente..."
+        exit 1
+    fi
+}
 # Function to get the UUID of the DVD
 get_dvd_uuid() {
     local device="$DEVICE"
@@ -176,9 +204,9 @@ copy_from() {
     fi
 }
 catalog() {
-    local $local=$1
+    local local=$1
     move_start_time=$(date +%s)
-    echo "Catalogando os dados copiados localmente em...$local"
+    echo -e "\n\nCatalogando os dados copiados localmente em $local. Aguarde..."    
     count_indefinido=0
     # Iterate over files in the subdir
     for fn in "$local"/*.RAW*; do
@@ -224,17 +252,18 @@ EOF
             #echo "Folder: $folder"
 
             #echo "MOVENDO PARA $folder/$dir/$fn" # DEBUG CONTROL
-            echo "movendo para $WORKING_DIRECTORY/local/$DVD_UUID/$folder/$fn"
+            #echo "movendo para $WORKING_DIRECTORY/local/$DVD_UUID/$folder/$fn"
             #Move o arquivo para o respectivo diretório para armazenamento
             #mkdir -p $WORKING_DIRECTORY/$folder && mv $fn $_
-            mkdir -p $WORKING_DIRECTORY/local/$DVD_UUID/$folder && mv $fn $_
+            mkdir -p $WORKING_DIRECTORY/local/$DVD_UUID/$folder && mv -f $fn $_
         else
-            echo "Arquivo vazio: $fn"
+            #echo "Arquivo vazio: $fn"
             ((count++))
             rm -f $fn
         fi
     done
-    echo "OK"
+    #Tratar mensagem de OK
+    #echo "OK"
     TAG="$min_date <--> $max_date"
     FTAG="$min_date"_"$max_date"
     createlog "Este DVD ($dvd_number) compreende o período $FTAG" "$LOG_FILE"
@@ -243,33 +272,42 @@ EOF
 
     echo "($move_execution_time s)"
     total_dados=$(find "$local" -type f | wc -l)
-    indefinidos=$(find "$local/indefinido" -type f | wc -l)
-    echo "Total de arquivos indefinidos neste dvd: ($indefinidos). Contate o suporte de TI."
+    if [ -d "$local/indefinido" ]; then
+        indefinidos=$(find "$local/indefinido" -type f | wc -l)
+        echo_color -e "$RED" "Total de arquivos indefinidos neste DVD: ($indefinidos). Contate o suporte de TI e informe o identificador do DVD."
+    else
+        echo_color -e "$BLUE" "Todos os arquivos foram classificados com sucesso."
+    fi
+
     if [[ $total_files -gt $total_dados ]]; then
         num_error_files=$((total_files - total_dados))
         echo "Operação realizada com erro. Alguns arquivos não foram restaurados. $num_error_files arquivos faltantes/com problema."
     else
         createlog "$TAG | Dados catalogados com sucesso! $timestamp: $total_dados arquivos restaurados. $count arquivos vazios." "$LOG_FILE"
-        catalog="$WORKING_DIRECTORY/catalog/$FTAG"
-        mv "$local" "$catalog"
-        tree -d "$catalog"
+        catalog="$WORKING_DIRECTORY/catalog"
+        mkdir -p $catalog
+        echo "Movendo de $local para $catalog"
+        mv "$local" "$catalog/$FTAG"
+        tree -d "$catalog/$FTAG"
         echo "Apagando diretórios marcados com erro..."
         rm -rf $err_local
-        ./sending_data.bash "$catalog" "$FTAG" &
+        ./sending_data.bash "$catalog/$FTAG" "$FTAG" &
     fi
 }
 # Função para ejetar o dispositivo
 ejetar_midia() {
-    sudo umount "$MOUNT_POINT"
+    local mount_point="$1"
+    local device="$2"
+    sudo umount "$mount_point"
     if [ $? -eq 0 ]; then
-        sudo eject "$DEVICE"
+        sudo eject "$device"
         if [ $? -eq 0 ]; then
-            echo "Dispositivo $DEVICE ejetado com sucesso."
+            echo "Dispositivo $device ejetado com sucesso."
         else
-            echo "Falha ao ejetar o dispositivo $DEVICE."
+            echo "Falha ao ejetar o dispositivo $device."
         fi
     else
-        echo "Falha ao desmontar o dispositivo $DEVICE."
+        echo "Falha ao desmontar o dispositivo $device."
     fi
 }
 
@@ -286,25 +324,25 @@ process_var() {
     local cidade
     local folder
 
-    # Determine product type
+    # Determina o tipo de produto contido do dado bruto
     case "$var" in
     *SURVEI*)
-        prod="sur"
+        prod="sur" # Define produto como "SURVEILLANCE"
         ;;
     *VOL_SCAN* | *VSCAN* | *PPI_VOL* | *CLUTTER*)
-        prod="vol"
+        prod="vol" # Define produto como "VOLUME SCAN"
         ;;
     *CLEAR* | *AIR*)
-        prod="cle"
+        prod="cle" # Define produto como "CLEAR"
         ;;
     *QUEIMA* | *FIRE*)
-        prod="que"
+        prod="que" # Define produto como "QUEIMADA"
         ;;
     *RHI* | *FRENTE* | *SECT* | *VVP*)
-        prod="dif"
+        prod="dif" # Define produto como "DIF"
         ;;
     *)
-        prod="indefinido"
+        prod="indefinido" # Define produto como "indefinido" --> Serão manipulados pelo técnico para encontrar o possível erro de classificação
         createlog "$fn: Problemas ao encontrar o rótulo de identificação do dado." "$LOG_FILE"
         ;;
     esac
@@ -312,13 +350,13 @@ process_var() {
     # Determine city of origin
     case "$var" in
     *[Bb]auru*)
-        cidade="bru"
+        cidade="bru" # Classifica como dados provenientes de RADAR_BAURU
         ;;
     *[Pp]aulo* | *[Pp]rudente*)
-        cidade="ppr"
+        cidade="ppr" # Classifica como dados provenientes de RADAR_PRUDENTE
         ;;
     *)
-        cidade="indefinido"
+        cidade="indefinido" # Classifica como dados provenientes de local indefinido --> Serão manipulados pelo técnico para encontrar o possível erro de classificação
         createlog "$fn: Problemas ao encontrar o rótulo de identificação do dado." "$LOG_FILE"
         #mv "$fn" "../indefinido"
         ;;
@@ -342,7 +380,7 @@ monta_storage() {
     # Verificar se o ponto de montagem existe, caso contrário, criar
     if [ ! -d "$STORAGE_MOUNT_POINT" ]; then
         echo "Criando ponto de montagem $STORAGE_MOUNT_POINT"
-        sudo mkdir -p "$STORAGE_MOUNT_POINT/$MACHINE_NAME"     
+        mkdir -p "$STORAGE_MOUNT_POINT/$MACHINE_NAME"
         sudo mount -t nfs -o rw,sync,hard,intr "$STORAGE_IP":"$STORAGE_PATH" "$STORAGE_MOUNT_POINT"
     else
         echo "$STORAGE_MOUNT_POINT já está montado..."
@@ -354,8 +392,8 @@ data_deploy() {
     local from=$1
     MACHINE_FOLDER="$STORAGE_MOUNT_POINT/$MACHINE_NAME"
     echo "Verificando o diretório $MACHINE_FOLDER em $STORAGE_MOUNT_POINT na storage para receber dados da máquina local..."
-    sudo mkdir -p "$MACHINE_FOLDER"
-    
+    mkdir -p "$MACHINE_FOLDER"
+
     #echo "||$from --------------------------------> $MACHINE_FOLDER||"
     createlog "Iniciando a transferência de dados de '$from' para '$MACHINE_FOLDER'." "$LOG_DEPLOY"
     createlog "Diretório de destino: $MACHINE_FOLDER" "$LOG_DEPLOY"
@@ -371,7 +409,7 @@ createlog() {
     local message="$1"
     local logfile="$2"
     echo $message
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $message" >> "$logfile"    
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $message" >>"$logfile"
 }
 #==========================================================================================
 #COLOR PALLETE
@@ -386,14 +424,23 @@ CYAN='\033[0;36m'
 WHITE='\033[0;37m'
 RESET='\033[0m'
 
-echo_color(){
+echo_color() {
     local params=$1
     local color_code=$2
     local output=$3
-     # Check if color code is provided
+    # Check if color code is provided
     if [ -z "$color_code" ]; then
         color_code=$RESET
     fi
 
     echo $params "${color_code}$output${RESET}"
+}
+
+check_user_exit() {
+    read -r -s -n 1 -t 1 input
+    if [[ $input = "q" ]]; then
+        sudo umount "$MOUNT_POINT"
+        echo -e "\nPrograma encerrado pelo usuário."
+        exit 0
+    fi
 }
