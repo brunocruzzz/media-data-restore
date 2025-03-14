@@ -164,6 +164,9 @@ check_dvd() {
     # Check if the UUID is already in the read list
     if grep -q "$DVD_UUID" "$READ_DVDS_FILE"; then
         echo_color -e "$YELLOW" "ATENÇÃO!!! DVD com UUID $DVD_UUID já foi registrado como lido/restaurado anteriormente. Pressione q para sair ou aguarde para realizar a operação de cópia novamente..."
+        echo_color -e "$YELLOW" "Pressione 'q' para sair..."
+        echo_color -e "$YELLOW" "Pressione 'B' para realizar backup (ISO + cópia no DVD novo)..."
+        echo_color -e "$YELLOW" "Pressione 'L' para limpar registros deste DVD nesta máquina..."
         # Verificar se o usuário pressionou Enter para encerrar o programa
         read -r -s -n 1 -t 5 input
         if [[ $input = "q" ]]; then
@@ -229,7 +232,8 @@ EOF
             #Usar um -verbose para exibir os cabeçalhos[opcional]
             #echo "$var" # aspas garantem o formato adequado para output[quebra de linhas]
             gen_time=$(echo "$var" | grep "Ingest time:")
-            dir=$(echo "$gen_time" | awk '{print $6}')
+            dir=$(echo "$gen_time" | awk '{print $4 $5 $6}')
+            dir=$(date -d $dir +%Y%m%d)
             ingest_date=$(echo "$gen_time" | awk '{print $4 "-" $5 "-" $6}')
             #echo "$dir ---> $fn"
             #echo $ingest_date

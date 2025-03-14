@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/bash
 
 # Script de Preparação para Restauração de Dados de DVDs
 # Autor(es):
