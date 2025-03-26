@@ -379,34 +379,42 @@ process_var() {
 monta_storage() {
     echo "Um processo de upload foi iniciado em segundo plano."
     echo "Confira os logs para verificação do envio"
-    umount $STORAGE_MOUNT_POINT
+    #sudo umount "$STORAGE_MOUNT_POINT/$MACHINE_NAME"
     #PREPARAÇÃO DO AMBIENTE
     # Verificar se o ponto de montagem existe, caso contrário, criar
-    if [ ! -d "$STORAGE_MOUNT_POINT" ]; then
-        echo "Criando ponto de montagem $STORAGE_MOUNT_POINT"
-        mkdir -p "$STORAGE_MOUNT_POINT/$MACHINE_NAME"
-        sudo mount -t nfs -o rw,sync,hard,intr "$STORAGE_IP":"$STORAGE_PATH" "$STORAGE_MOUNT_POINT"
-    else
-        echo "$STORAGE_MOUNT_POINT já está montado..."
-        tree -d $STORAGE_MOUNT_POINT
-    fi
+        if [ ! -d "$STORAGE_MOUNT_POINT" ]; then
+            echo "Criando ponto de montagem $STORAGE_MOUNT_POINT --->$STORAGE_IP:$STORAGE_PATH"
+            mkdir -p "$STORAGE_MOUNT_POINT/$MACHINE_NAME"
+            sudo mount -t nfs -o rw,sync,hard,intr "$STORAGE_IP":"$STORAGE_PATH" "$STORAGE_MOUNT_POINT/$MACHINE_NAME"
+        else
+            echo "$STORAGE_MOUNT_POINT já está montado..."
+            tree -d $STORAGE_MOUNT_POINT
+        fi
+    sudo mount -t nfs -o rw,sync,hard,intr "$STORAGE_IP":"$STORAGE_PATH" "$STORAGE_MOUNT_POINT"
+    sleep 1
 }
 
 data_deploy() {
     local from=$1
     MACHINE_FOLDER="$STORAGE_MOUNT_POINT/$MACHINE_NAME"
-    echo "Verificando o diretório $MACHINE_FOLDER em $STORAGE_MOUNT_POINT na storage para receber dados da máquina local..."
+    echo "Verificando o diretório $MACHINE_FOLDER em $STORAGE_MOUNT_POINT na storage para receber dados da máquina local $MACHINE_NAME..."
+    echo "Destino NFS: $STORAGE_IP:$STORAGE_PATH"
     mkdir -p "$MACHINE_FOLDER"
-
+    sleep 3
     #echo "||$from --------------------------------> $MACHINE_FOLDER||"
     createlog "Iniciando a transferência de dados de '$from' para '$MACHINE_FOLDER'." "$LOG_DEPLOY"
     createlog "Diretório de destino: $MACHINE_FOLDER" "$LOG_DEPLOY"
-    sudo rsync -rh --info=progress2 $from $MACHINE_FOLDER
-    if [ $? -eq 0 ]; then
+    echo "rsync -rh --info=progress2 $from $MACHINE_FOLDER"
+    sleep 3
+    rsync -rh --info=progress2 $from $MACHINE_FOLDER
+    if [ $? -eq 0 ]; then        
         createlog "Transferência de dados concluída com sucesso para '$MACHINE_FOLDER'." "$LOG_DEPLOY"
+        createlog "$TAG |-----> Upload de dados(Rodada $RUN) realizado com sucesso" "$LOG_DEPLOY"
+        FLAG_OK=$MACHINE_FOLDER/$(basename $from)/DIR_OK
+        touch $FLAG_OK        
     else
         createlog "Falha na transferência de dados para '$MACHINE_FOLDER'. Verifique os logs para mais detalhes." "$LOG_DEPLOY"
-        echo_color -en "$RED" "Contate o suporte de TI."
+        echo_color -en "$RED" "Contate o suporte de TI para permissão de upload para o servidor."
     fi
 }
 createlog() {

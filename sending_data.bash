@@ -29,9 +29,6 @@ fi
 sleep 3
 monta_storage
 data_deploy $RUN
-sleep 2
-echo ""
-createlog "$TAG |-----> Upload de dados(Rodada $RUN) realizado com sucesso" "$LOG_DEPLOY"
 echo ""
 # Ensure the script ends cleanly
 exit 
