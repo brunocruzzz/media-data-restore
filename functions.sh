@@ -83,7 +83,7 @@ check_disk_space() {
     local readable_required_space=$(df -h "$data_mount_point" | awk 'NR==2 {print $3}')
     sleep 2 # Verificar se isso é realmente necessário
 
-    local disk="/"
+    local disk="$WORKING_DIRECTORY"
     local free_space=$(df --block-size=1 "$disk" | awk 'NR==2 {print $4}')
     local readable_free_space=$(df -h "$disk" | awk 'NR==2 {print $4}')
 
