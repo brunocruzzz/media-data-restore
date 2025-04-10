@@ -37,9 +37,11 @@ monta_device
 ###########################################################################################################
 #PREPARAÇÃO DO AMBIENTE
 ###########################################################################################################
-
 sleep 2
 # Loop principal de leitura de dvd's
+# Captura sinais comuns de encerramento e chama a função cleanup
+trap cleanup SIGINT SIGTERM SIGQUIT
+
 while true; do
     # Verifica se o dispositivo está montado(mountpoint)
     if dispositivo_montado; then
@@ -53,7 +55,8 @@ while true; do
         echo -e "\nO rótulo da mídia/imagem é: $DVD_LABEL"
         echo_color -en "$YELLOW" "Insira o número identificador do DVD: "
         read -r dvd_number
-        timestamp=$(date +"%Y%m%d_%H%M%S")                
+        timestamp=$(date +"%Y%m%d_%H%M%S")
+        createlog "------------------------------------------------------------------------------" "$LOG_FILE"
         createlog "ID: $dvd_number - UUID: $DVD_UUID - ID da execução: $timestamp" "$LOG_FILE"
         #echo "ID: $dvd_number - UUID: $DVD_UUID - ID da execução: $timestamp" | tee -a "$LOG_FILE"
         
@@ -81,10 +84,10 @@ while true; do
         ############################################################################################################
         #PROCESSO DE CATALOGO E ORGANIZAÇÃO LOCAL
         ############################################################################################################
-        catalog $local &
+        catalog "$local" & disown
         # Final outputs
         #echo "Fim da rodada $ok_local" | tee -a $LOG_FILE
-        createlog "Fim da rodada $ok_local" $LOG_FILE
+        createlog "Fim da rodada $ok_local" $LOG_FILE        
         #sudo umount $MOUNT_POINT
             
     else

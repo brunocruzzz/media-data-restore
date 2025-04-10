@@ -163,7 +163,8 @@ check_dvd() {
     fi
     # Check if the UUID is already in the read list
     if grep -q "$DVD_UUID" "$READ_DVDS_FILE"; then
-        echo_color -e "$YELLOW" "ATENÇÃO!!! DVD com UUID $DVD_UUID já foi registrado como lido/restaurado anteriormente. Pressione q para sair ou aguarde para realizar a operação de cópia novamente..."
+        DVD=$(grep "$DVD_UUID" "$READ_DVDS_FILE" | tail -n 1 | awk -F'|' '{print $1}' | cut -d':' -f2)
+        echo_color -e "$YELLOW" "ATENÇÃO!!! DVD $DVD com UUID $DVD_UUID já foi registrado como lido/restaurado anteriormente. Pressione q para sair ou aguarde para realizar a operação de cópia novamente..."
         echo_color -e "$YELLOW" "Pressione 'q' para sair..."
         echo_color -e "$YELLOW" "Pressione 'B' para realizar backup (ISO + cópia no DVD novo)..."
         echo_color -e "$YELLOW" "Pressione 'L' para limpar registros deste DVD nesta máquina..."
@@ -184,25 +185,24 @@ dispositivo_montado() {
 }
 
 copy_from() {
-    rm -rf $err_local
+    rm -rf $err_local # Se há um diretório deste dvd com erro marcado, ele é apagado
     copy_start_time=$(date +%s)
-    total_files=$(ls -1 "$MOUNT_POINT/product_raw/"*.RAW* 2>/dev/null | wc -l)
+    total_files=$(ls -1 "$MOUNT_POINT/product_raw/"*.RAW* 2>/dev/null | wc -l) #Busca o numero de arquivos RAW no DVD
     echo "Copiando dados do DVD($total_files encontrados)..."
     #cp $MOUNT_POINT/product_raw/* .
-    rsync -rh --info=progress2 --ignore-existing $MOUNT_POINT/product_raw/ $local 2>/dev/null
-    # # Check the exit status of rsync
+    rsync -rh --info=progress2 --ignore-existing $MOUNT_POINT/product_raw/ $local 2>/dev/null #Faz a cópia local do DVD     
     if [ $? -eq 0 ]; then
         copy_end_time=$(date +%s)
         copy_execution_time=$((copy_end_time - copy_start_time))
-        createlog "Cópia do DVD realizada com sucesso de $DEVICE($copy_execution_time s)" "$LOG_FILE"
+        createlog "Cópia local do DVD realizada com sucesso de $DEVICE($copy_execution_time s)" "$LOG_FILE"
         echo "DVD com UUID $DVD_UUID adicionado a lista de DVD's lidos."
-        echo "$DVD_UUID" >>"$READ_DVDS_FILE"
+        echo "DVD:$dvd_number|UUID:$DVD_UUID|" >>"$READ_DVDS_FILE"
     else
         copy_end_time=$(date +%s)
         copy_execution_time=$((copy_end_time - copy_start_time))
         createlog "A cópia $local foi mal-executada após $copy_execution_time s)" "$LOG_FILE"
-        mv "$local" "$err_local"
-        echo "Diretório renomeado para $err_local devido a falha/erro durante a cópia"
+        mv "$local" "$err_local" #Move a tentativa de leitura do DVD para a pasta ERR_DVD_UUID
+        echo "Diretório renomeado para $err_local devido a falha/erro durante a cópia. Contate o TI para verificação."
         exit 1
     fi
 }
@@ -210,7 +210,9 @@ catalog() {
     local local=$1
     move_start_time=$(date +%s)
     echo -e "\n\nCatalogando os dados copiados localmente em $local. Aguarde..."    
-    count_indefinido=0
+    count=0
+    min_date=""
+    max_date=""
     # Iterate over files in the subdir
     for fn in "$local"/*.RAW*; do
         #echo "Processing file: $fn"
@@ -233,11 +235,11 @@ EOF
             #echo "$var" # aspas garantem o formato adequado para output[quebra de linhas]
             gen_time=$(echo "$var" | grep "Ingest time:")
             dir=$(echo "$gen_time" | awk '{print $4 $5 $6}')
-            dir=$(date -d $dir +%Y%m%d)
+            dir=$(date -d "$dir 12" +%Y%m%d)
             ingest_date=$(echo "$gen_time" | awk '{print $4 "-" $5 "-" $6}')
             #echo "$dir ---> $fn"
             #echo $ingest_date
-            converted_date=$(date -d "$ingest_date" +"%Y-%m-%d")
+            converted_date=$(date -d "$ingest_date 12" +"%Y-%m-%d")
             #echo "$converted_date"
             # Update the minimum and maximum dates
             if [ -z "$min_date" ] || [[ "$converted_date" < "$min_date" ]]; then
@@ -259,7 +261,10 @@ EOF
             #echo "movendo para $WORKING_DIRECTORY/local/$DVD_UUID/$folder/$fn"
             #Move o arquivo para o respectivo diretório para armazenamento
             #mkdir -p $WORKING_DIRECTORY/$folder && mv $fn $_
-            mkdir -p $WORKING_DIRECTORY/local/$DVD_UUID/$folder && mv -f $fn $_
+            mkdir -p "$WORKING_DIRECTORY/local/$DVD_UUID/$folder" && cp -f "$fn" "$_"
+            if [[ $? -ne 0 ]]; then                            
+                createlog "$dvd_number | Erro: Falha ao mover '$fn' para '$WORKING_DIRECTORY/local/$DVD_UUID/$folder/'" "$LOG_FILE"
+            fi
         else
             #echo "Arquivo vazio: $fn"
             ((count++))
@@ -286,16 +291,17 @@ EOF
     if [[ $total_files -gt $total_dados ]]; then
         num_error_files=$((total_files - total_dados))
         echo "Operação realizada com erro. Alguns arquivos não foram restaurados. $num_error_files arquivos faltantes/com problema."
+        createlog "$TAG | Operação realizada com erro. Alguns arquivos não foram restaurados. $num_error_files arquivos faltantes/com problema." "$LOG_FILE"
     else
         createlog "$TAG | Dados catalogados com sucesso! $timestamp: $total_dados arquivos restaurados. $count arquivos vazios." "$LOG_FILE"
         catalog="$WORKING_DIRECTORY/catalog"
         mkdir -p $catalog
         echo "Movendo de $local para $catalog"
         mv "$local" "$catalog/$FTAG"
-        tree -d "$catalog/$FTAG"
+        #tree -d "$catalog/$FTAG"
         echo "Apagando diretórios marcados com erro..."
-        rm -rf $err_local
-        ./sending_data.bash "$catalog/$FTAG" "$FTAG" &
+        rm -rf "$err_local"
+        ./sending_data.bash "$catalog/$FTAG" "$FTAG" > /dev/null && echo_color -e "$GREEN" "Upload DVD $dvd_number completo" &
     fi
 }
 # Função para ejetar o dispositivo
@@ -361,7 +367,7 @@ process_var() {
         ;;
     *)
         cidade="indefinido" # Classifica como dados provenientes de local indefinido --> Serão manipulados pelo técnico para encontrar o possível erro de classificação
-        createlog "$fn: Problemas ao encontrar o rótulo de identificação do dado." "$LOG_FILE"
+        createlog "$fn: Problemas ao encontrar o rótulo de origem do dado." "$LOG_FILE"
         #mv "$fn" "../indefinido"
         ;;
     esac
@@ -387,10 +393,18 @@ monta_storage() {
             mkdir -p "$STORAGE_MOUNT_POINT/$MACHINE_NAME"
             sudo mount -t nfs -o rw,sync,hard,intr "$STORAGE_IP":"$STORAGE_PATH" "$STORAGE_MOUNT_POINT/$MACHINE_NAME"
         else
-            echo "$STORAGE_MOUNT_POINT já está montado..."
-            tree -d $STORAGE_MOUNT_POINT
+            echo "$STORAGE_MOUNT_POINT já está criado..."
+            #tree -d $STORAGE_MOUNT_POINT
         fi
+    echo "Montando storage localmente..."
     sudo mount -t nfs -o rw,sync,hard,intr "$STORAGE_IP":"$STORAGE_PATH" "$STORAGE_MOUNT_POINT"
+    if [ $? -eq 0 ]; then 
+        echo "Storage conectada com sucesso..."
+    else
+        echo "Problemas na conexão NFS com storage"
+        createlog "Problemas na conexão NFS com storage: "$STORAGE_IP":"$STORAGE_PATH" "$STORAGE_MOUNT_POINT"" "$LOG_DEPLOY"
+        exit 1
+    fi
     sleep 1
 }
 
@@ -400,16 +414,16 @@ data_deploy() {
     echo "Verificando o diretório $MACHINE_FOLDER em $STORAGE_MOUNT_POINT na storage para receber dados da máquina local $MACHINE_NAME..."
     echo "Destino NFS: $STORAGE_IP:$STORAGE_PATH"
     mkdir -p "$MACHINE_FOLDER"
-    sleep 3
+    #sleep 3
     #echo "||$from --------------------------------> $MACHINE_FOLDER||"
     createlog "Iniciando a transferência de dados de '$from' para '$MACHINE_FOLDER'." "$LOG_DEPLOY"
     createlog "Diretório de destino: $MACHINE_FOLDER" "$LOG_DEPLOY"
-    echo "rsync -rh --info=progress2 $from $MACHINE_FOLDER"
+    #echo "rsync -rh --info=progress2 $from $MACHINE_FOLDER"
     sleep 3
     rsync -rh --info=progress2 $from $MACHINE_FOLDER
     if [ $? -eq 0 ]; then        
         createlog "Transferência de dados concluída com sucesso para '$MACHINE_FOLDER'." "$LOG_DEPLOY"
-        createlog "$TAG |-----> Upload de dados(Rodada $RUN) realizado com sucesso" "$LOG_DEPLOY"
+        createlog "$dvd_number|$TAG |-----> Upload de dados(Rodada $RUN) realizado com sucesso" "$LOG_DEPLOY"
         FLAG_OK=$MACHINE_FOLDER/$(basename $from)/DIR_OK
         touch $FLAG_OK        
     else
@@ -453,6 +467,26 @@ check_user_exit() {
     if [[ $input = "q" ]]; then
         sudo umount "$MOUNT_POINT"
         echo -e "\nPrograma encerrado pelo usuário."
+        createlog "Programa encerrado pelo usuário." "$LOG_FILE"
+        createlog "-----------------------------------------------------------------------" "$LOG_FILE"
         exit 0
     fi
+}
+
+# Função para limpar recursos ao encerrar o script
+cleanup() {
+    echo "Encerrando script..."
+    createlog "Script encerrado pelo usuário ou por um erro." "$LOG_FILE"
+    createlog "-----------------------------------------------------------------------" "$LOG_FILE"
+    # Finaliza processos secundários (caso existam)
+    #pkill -P $$
+
+    # Desmonta a mídia se estiver montada
+    #if dispositivo_montado; then
+    #    echo "Desmontando $MOUNT_POINT..."
+    #    sudo umount "$MOUNT_POINT"
+    #fi
+    
+    echo "Fim da limpeza. Saindo..."
+    exit 0
 }

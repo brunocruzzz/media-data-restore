@@ -28,7 +28,12 @@ if [ -n "$2" ]; then
 fi
 sleep 3
 monta_storage
-data_deploy $RUN
+if [ $? -eq 0 ]; then 
+    data_deploy $RUN
+else
+    echo "Erro na montagem. Dados não enviados..."
+    createlog "Erro na montagem. Dados $TAG não enviados..." "$LOG_DEPLOY"
+fi
 echo ""
 # Ensure the script ends cleanly
 exit 
