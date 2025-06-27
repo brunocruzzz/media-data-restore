@@ -68,7 +68,9 @@ handle_parameters() {
         WORKING_DIRECTORY="${2:-$WORKING_DIRECTORY}"
     fi
 }
-
+is_wsl(){
+     uname -r | grep -qi "microsoft"
+}
 # Função para exibir o cabeçalho
 exibir_cabecalho() {
     clear
@@ -139,13 +141,21 @@ monta_iso() {
 }
 # Function to get the UUID of the DVD
 get_dvd_uuid() {
-    local device="$DEVICE"
-    blkid "$device" | grep -oP 'UUID="\K[^"]+'
+    if(is_wsl) ; then
+        powershell.exe -Command "(Get-Item -Path D:\).CreationTime.ToString('yyyyMMddHHmmssfff')" | tr -d '\r'
+    else
+        local device="$DEVICE"
+        blkid "$device" | grep -oP 'UUID="\K[^"]+'
+    fi
 }
 # Function to get the label of the DVD
 get_dvd_label() {
-    local device="$DEVICE"
-    blkid -s LABEL -o value "$device"
+    if(is_wsl) ; then
+        powershell.exe "(Get-Volume -DriveLetter D).FileSystemLabel"
+    else
+        local device="$DEVICE"
+        blkid -s LABEL -o value "$device"
+    fi
 }
 
 check_dvd() {
