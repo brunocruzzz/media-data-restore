@@ -190,7 +190,7 @@ copy_from() {
     total_files=$(ls -1 "$MOUNT_POINT/product_raw/"*.RAW* 2>/dev/null | wc -l) #Busca o numero de arquivos RAW no DVD
     echo "Copiando dados do DVD($total_files encontrados)..."
     #cp $MOUNT_POINT/product_raw/* .
-    rsync -rh --info=progress2 --ignore-existing $MOUNT_POINT/product_raw/ $local 2>/dev/null #Faz a cópia local do DVD     
+    RSYNC_ERROR=$(rsync -rh --info=progress2 --ignore-existing $MOUNT_POINT/product_raw/ $local 2>/dev/null) #Faz a cópia local do DVD     
     if [ $? -eq 0 ]; then
         copy_end_time=$(date +%s)
         copy_execution_time=$((copy_end_time - copy_start_time))
@@ -201,6 +201,8 @@ copy_from() {
         copy_end_time=$(date +%s)
         copy_execution_time=$((copy_end_time - copy_start_time))
         createlog "A cópia $local foi mal-executada após $copy_execution_time s)" "$LOG_FILE"
+        echo "[ERRO] rsync falhou com a seguinte mensagem:"
+        echo "$RSYNC_ERROR"
         mv "$local" "$err_local" #Move a tentativa de leitura do DVD para a pasta ERR_DVD_UUID
         echo "Diretório renomeado para $err_local devido a falha/erro durante a cópia. Contate o TI para verificação."
         exit 1
@@ -489,4 +491,8 @@ cleanup() {
     
     echo "Fim da limpeza. Saindo..."
     exit 0
+}
+
+test_folder() {
+    echo ""
 }
