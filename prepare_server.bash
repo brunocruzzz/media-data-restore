@@ -18,7 +18,7 @@
 #growisofs -Z /dev/sr0=/home/user/brunocruzz/DATADISK-1206.ISO
 
 clear
-
+source functions.sh
 # Verificar a arquitetura do sistema
 architecture=$(uname -m)
 echo "Sistema: $architecture"
@@ -103,7 +103,11 @@ if [ ! -f "$CONFIG_FILE" ]; then
     #DEVICE=$(blkid -o device | grep -m 1 "/dev/sr" || echo "/dev/sr0")
     MACHINE_NAME=$(hostname)
     #DEVICE=$(blkid | grep iso9660 | awk -F: '{print $1}')
-    DEVICE=$(lsblk -o KNAME,PATH,TYPE | awk '$3 == "rom" {print $2}')
+    if is_wsl; then
+        DEVICE=$(powershell.exe -Command "(Get-CimInstance -ClassName Win32_CDROMDrive).Drive")
+    else
+        DEVICE=$(lsblk -o KNAME,PATH,TYPE | awk '$3 == "rom" {print $2}')
+    fi    
     # Solicitar ao usuário o ponto de montagem
     read -p "Por favor, insira o ponto de montagem da mídia(padrão: /mnt/dvd): " MOUNT_POINT
     MOUNT_POINT=${MOUNT_POINT:-"/mnt/dvd"}
