@@ -4,6 +4,29 @@
 
 Este script prepara a máquina para a restauração de dados de DVDs, configurando o ambiente necessário e instalando as ferramentas adequadas.
 
+## Pré-requisitos
+
+Se estiver utilizando Windows com WSL (Windows Subsystem for Linux), é necessário rodar previamente o script enable_wsl.bat para garantir que o WSL esteja corretamente instalado e configurado.
+
+### Script enable_wsl.bat
+Este script realiza os seguintes passos:
+
+Verifica se está sendo executado com permissões de administrador;
+
+Habilita o recurso WSL no Windows;
+
+Ativa a Plataforma de Máquina Virtual;
+
+Define o WSL 2 como padrão;
+
+Instala a distribuição padrão (Ubuntu).
+
+### Como executar:
+
+Execute o script `enable_wsl.bat`;
+
+Clique com o botão direito e execute como Administrador:
+
 ## Uso
 
 ### Passo a Passo
