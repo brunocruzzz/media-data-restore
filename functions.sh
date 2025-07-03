@@ -81,13 +81,26 @@ exibir_cabecalho() {
 
 check_disk_space() {
     local data_mount_point="$1"
+
+	if is_wsl; then
+		data_mount_point=$(echo "$data_mount_point" | sed -E 's|^([A-Za-z]):$|/mnt/\L\1|')
+	fi
+
     local required_space=$(df --block-size=1 "$data_mount_point" | awk 'NR==2 {print $3}')
     local readable_required_space=$(df -h "$data_mount_point" | awk 'NR==2 {print $3}')
     sleep 2 # Verificar se isso é realmente necessário
-
-    local disk="$WORKING_DIRECTORY"
+	
+	if is_wsl; then
+		local windows_home_winpath=$(powershell.exe -NoProfile -Command '[Environment]::GetEnvironmentVariable("USERPROFILE")' | tr -d '\r')
+		local disk="/mnt/$(echo "$windows_home_winpath" | sed -E 's|^([A-Za-z]):|\L\1|;s|\\|/|g')"
+	else
+		local disk="$WORKING_DIRECTORY"	
+	fi
     local free_space=$(df --block-size=1 "$disk" | awk 'NR==2 {print $4}')
     local readable_free_space=$(df -h "$disk" | awk 'NR==2 {print $4}')
+	echo "tamanho em $disk"
+	echo "Espaço em $disk: $free_space"
+	echo "Espaço a ser utilizado em $disk: $readable_required_space em $readable_free_space"
 
     if ((free_space < required_space)); then
         echo_color -e "$RED" "Espaço em disco insuficiente ($readable_free_space). São necessários $readable_required_space.\n Verifique se existem dados a serem catalogados e enviados e então, execute uma limpeza usando o comando:"
@@ -99,8 +112,10 @@ check_disk_space() {
 }
 
 monta_device() {
-    #echo "Montando o dispositivo $DEVICE em $MOUNT_POINT com o sistema de arquivos $FS_TYPE..."
-    sudo umount $MOUNT_POINT
+    echo "Montando o dispositivo $DEVICE em $MOUNT_POINT com o sistema de arquivos $FS_TYPE..."
+    if mountpoint -q "$MOUNT_POINT"; then
+        sudo umount "$MOUNT_POINT"
+    fi	
     # Verificar se o ponto de montagem existe, caso contrário, criar
     if [ ! -d "$MOUNT_POINT" ]; then
         echo "Criando ponto de montagem..."
@@ -113,19 +128,28 @@ monta_device() {
             echo "$MOUNT_POINT já está montado."
         fi
     else
-        # Tenta montar o dispositivo no ponto de montagem especificado
-        if sudo mount "$DEVICE" "$MOUNT_POINT" >/dev/null 2>&1; then
+        opts=""
+		echo "Dispositivo não está montado. Montando..."
+		if is_wsl; then
+			opts=(-t drvfs)
+		fi
+        # Tenta montar o dispositivo no ponto de montagem especificado	
+        echo "sudo mount "${opts[@]}" "$DEVICE" "$MOUNT_POINT""
+        if sudo mount "${opts[@]}" "$DEVICE" "$MOUNT_POINT" >/dev/null 2>&1; then
             echo "Dispositivo $DEVICE montado com sucesso em $MOUNT_POINT."
         else
             createlog "Falha ao montar o dispositivo $DEVICE em $MOUNT_POINT." "$LOG_FILE"
             echo_color -e "$RED" "Verifique se o DVD foi inserido corretamente..."
+            ejetar_midia "$MOUNT_POINT" "$DEVICE" 
             exit 1
         fi
-    fi
+    fi	
 }
 monta_iso() {
     local iso=$1
-    sudo umount $MOUNT_POINT
+    if mountpoint -q "$MOUNT_POINT"; then
+        sudo umount "$MOUNT_POINT"
+    fi
     # Verificar se o ponto de montagem existe, caso contrário, criar
     if [ ! -d "$MOUNT_POINT" ]; then
         echo "Criando ponto de montagem..."
@@ -135,14 +159,14 @@ monta_iso() {
         echo "Dispositivo $DEVICE montado com sucesso em $MOUNT_POINT."
     else
         createlog "Falha ao montar o dispositivo $iso em $MOUNT_POINT." "$LOG_FILE"
-        echo_color -e "$RED" "Verifique se o DVD foi inserido corretamente..."
+        echo_color -e "$RED" "Verifique se o DVD foi inserido corretamente..."        
         exit 1
     fi
 }
 # Function to get the UUID of the DVD
 get_dvd_uuid() {
-    if(is_wsl) ; then
-        powershell.exe -Command "(Get-Item -Path D:\).CreationTime.ToString('yyyyMMddHHmmssfff')" | tr -d '\r'
+    if is_wsl; then
+        powershell.exe -Command "(Get-Item -Path D:\).CreationTime.ToString('yyyy-MM-dd_HH-mm-ss-ff')" | tr -d '\r'
     else
         local device="$DEVICE"
         blkid "$device" | grep -oP 'UUID="\K[^"]+'
@@ -150,7 +174,7 @@ get_dvd_uuid() {
 }
 # Function to get the label of the DVD
 get_dvd_label() {
-    if(is_wsl) ; then
+    if is_wsl; then
         powershell.exe "(Get-Volume -DriveLetter D).FileSystemLabel"
     else
         local device="$DEVICE"
@@ -188,7 +212,12 @@ check_dvd() {
 }
 # Função para verificar se o dispositivo está montado
 dispositivo_montado() {
-    sudo mount -o rw $DEVICE $MOUNT_POINT >/dev/null 2>&1
+	if is_wsl; then
+		opts=(-t dvrfs)
+	else
+		opts=(-o rw)
+	fi
+    sudo mount "${opts[@]}" $DEVICE $MOUNT_POINT >/dev/null 2>&1	
     mountpoint -q "$MOUNT_POINT"
 
     return $?
@@ -319,18 +348,23 @@ EOF
 # Função para ejetar o dispositivo
 ejetar_midia() {
     local mount_point="$1"
-    local device="$2"
-    sudo umount "$mount_point"
-    if [ $? -eq 0 ]; then
-        sudo eject "$device"
+    local device="$2"    
+        if is_wsl; then
+            powershell.exe -Command '(New-Object -ComObject Shell.Application).NameSpace(17).ParseName("D:").InvokeVerb("Eject")'
+        else
+            sudo umount "$mount_point"
+            if [ $? -eq 0 ]; then
+                sudo eject "$device"
+            else
+                echo "Falha ao ejetar o dispositivo $device."
+            fi                        
+        fi
         if [ $? -eq 0 ]; then
             echo "Dispositivo $device ejetado com sucesso."
         else
-            echo "Falha ao ejetar o dispositivo $device."
-        fi
-    else
-        echo "Falha ao desmontar o dispositivo $device."
-    fi
+            echo "Falha ao desmontar o dispositivo $device."
+        fi        
+    
 }
 
 gera_log() {
@@ -409,6 +443,7 @@ monta_storage() {
             #tree -d $STORAGE_MOUNT_POINT
         fi
     echo "Montando storage localmente..."
+    echo "sudo mount -t nfs -o rw,sync,hard,intr "$STORAGE_IP":"$STORAGE_PATH" "$STORAGE_MOUNT_POINT""
     sudo mount -t nfs -o rw,sync,hard,intr "$STORAGE_IP":"$STORAGE_PATH" "$STORAGE_MOUNT_POINT"
     if [ $? -eq 0 ]; then 
         echo "Storage conectada com sucesso..."

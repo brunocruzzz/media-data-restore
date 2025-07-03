@@ -32,8 +32,10 @@ exibir_cabecalho
 ###########################################################################################################
 handle_parameters "$@"
 echo "Preparando sistema..."
-if(is_wsl) ; then
+if is_wsl; then
     echo_color -en "$RED" "O script está rodando em ambiente WSL.\n"
+	monta_device
+	ls $MOUNT_POINT
 else
     echo_color -en "$RED" "O script está rodando em ambiente Linux.\n"
     monta_device
