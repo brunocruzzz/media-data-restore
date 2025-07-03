@@ -436,7 +436,7 @@ monta_storage() {
     # Verificar se o ponto de montagem existe, caso contrário, criar
         if [ ! -d "$STORAGE_MOUNT_POINT" ]; then
             echo "Criando ponto de montagem $STORAGE_MOUNT_POINT --->$STORAGE_IP:$STORAGE_PATH"
-            mkdir -p "$STORAGE_MOUNT_POINT/$MACHINE_NAME"
+            sudo mkdir -p "$STORAGE_MOUNT_POINT/$MACHINE_NAME"
             sudo mount -t nfs -o rw,sync,hard,intr "$STORAGE_IP":"$STORAGE_PATH" "$STORAGE_MOUNT_POINT/$MACHINE_NAME"
         else
             echo "$STORAGE_MOUNT_POINT já está criado..."
@@ -460,7 +460,7 @@ data_deploy() {
     MACHINE_FOLDER="$STORAGE_MOUNT_POINT/$MACHINE_NAME"
     echo "Verificando o diretório $MACHINE_FOLDER em $STORAGE_MOUNT_POINT na storage para receber dados da máquina local $MACHINE_NAME..."
     echo "Destino NFS: $STORAGE_IP:$STORAGE_PATH"
-    mkdir -p "$MACHINE_FOLDER"
+    sudo mkdir -p "$MACHINE_FOLDER"
     #sleep 3
     #echo "||$from --------------------------------> $MACHINE_FOLDER||"
     createlog "Iniciando a transferência de dados de '$from' para '$MACHINE_FOLDER'." "$LOG_DEPLOY"
