@@ -10,17 +10,17 @@
 # Descrição:
 # Este script realiza a restauração de dados a partir de DVDs, ajudando na recuperação
 # de informações críticas armazenadas em mídias físicas.
+# Funciona em ambientes Linux e WSL. Sudo deve estar habilitado para o usuário.
 #
 # Data de Criação: 23/05/2024
 # Última Atualização: 04/07/2024
 #
 # Uso:
-# ./script_restauracao_dados_dvd.sh [opções]
+# ./copiar.bash [opções]
 #
 # Opções:
 # -h, --help     Mostra esta mensagem de ajuda e sai
 # -v, --version  Mostra a versão do script
-#
 ###############################################################################
 
 source functions.sh
@@ -53,11 +53,7 @@ trap cleanup SIGINT SIGTERM SIGQUIT
 while true; do
     # Verifica se o dispositivo está montado(mountpoint)
     if dispositivo_montado; then
-        check_disk_space "$DEVICE"
-        #MOUNT_POINT="/mnt/iso"
-        #MOUNT_POINT="/mnt/dvd"
-        #DEVICE="/home/user/brunocruzz/DATADISK-1206.ISO"
-        #DEVICE=$(blkid | grep iso9660 | awk -F: '{print $1}')
+        check_disk_space "$DEVICE"        
         # Obter o rótulo/UUID da mídia/imagem
         check_dvd
         echo -e "\nO rótulo da mídia/imagem é: $DVD_LABEL"

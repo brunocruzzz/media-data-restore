@@ -430,7 +430,7 @@ process_var() {
 
 monta_storage() {
     echo "Um processo de upload foi iniciado em segundo plano."
-    echo "Confira os logs para verificação do envio"
+    echo "Confira os logs para verificação do envio."
     #sudo umount "$STORAGE_MOUNT_POINT/$MACHINE_NAME"
     #PREPARAÇÃO DO AMBIENTE
     # Verificar se o ponto de montagem existe, caso contrário, criar
@@ -443,12 +443,12 @@ monta_storage() {
             #tree -d $STORAGE_MOUNT_POINT
         fi
     echo "Montando storage localmente..."
-    echo "sudo mount -t nfs -o rw,sync,hard,intr "$STORAGE_IP":"$STORAGE_PATH" "$STORAGE_MOUNT_POINT""
+    #echo "sudo mount -t nfs -o rw,sync,hard,intr "$STORAGE_IP":"$STORAGE_PATH" "$STORAGE_MOUNT_POINT""
     sudo mount -t nfs -o rw,sync,hard,intr "$STORAGE_IP":"$STORAGE_PATH" "$STORAGE_MOUNT_POINT"
     if [ $? -eq 0 ]; then 
         echo "Storage conectada com sucesso..."
     else
-        echo "Problemas na conexão NFS com storage"
+        echo "Problemas na conexão NFS com storage. Verifique se o IP e o caminho estão corretos e se o cliente foi autorizado no servidor NFS."
         createlog "Problemas na conexão NFS com storage: "$STORAGE_IP":"$STORAGE_PATH" "$STORAGE_MOUNT_POINT"" "$LOG_DEPLOY"
         exit 1
     fi
