@@ -213,7 +213,7 @@ check_dvd() {
 # Função para verificar se o dispositivo está montado
 dispositivo_montado() {
 	if is_wsl; then
-		opts=(-t dvrfs)
+		opts=(-t drvfs)
 	else
 		opts=(-o rw)
 	fi
@@ -342,6 +342,7 @@ EOF
         #tree -d "$catalog/$FTAG"
         echo "Apagando diretórios marcados com erro..."
         rm -rf "$err_local"
+        echo "Enviando DVD $dvd_number para a storage..."
         ./sending_data.bash "$catalog/$FTAG" "$FTAG" > /dev/null && echo_color -e "$GREEN" "Upload DVD $dvd_number completo" &
     fi
 }
