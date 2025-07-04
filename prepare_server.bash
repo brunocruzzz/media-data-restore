@@ -104,7 +104,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
     MACHINE_NAME=$(hostname)
     #DEVICE=$(blkid | grep iso9660 | awk -F: '{print $1}')
     if is_wsl; then
-        DEVICE=$(powershell.exe -Command "(Get-CimInstance -ClassName Win32_CDROMDrive).Drive")
+        DEVICE=$(powershell.exe -Command "(Get-CimInstance -ClassName Win32_CDROMDrive).Drive"  | tr -d '\r\n')
     else
         DEVICE=$(lsblk -o KNAME,PATH,TYPE | awk '$3 == "rom" {print $2}')
     fi    
