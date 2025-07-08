@@ -1,4 +1,8 @@
-# prepare_server.bash
+# Sistema de restauração de DVD's para storage
+
+Este repositório automatiza a restauração de backups a partir de mídias físicas para o servidor de dados, como parte de um plano de contingência.
+
+# setup_client.bash
 
 ## Descrição
 
@@ -8,24 +12,20 @@ Este script prepara a máquina para a restauração de dados de DVDs, configuran
 
 Se estiver utilizando Windows com WSL (Windows Subsystem for Linux), é necessário rodar previamente o script enable_wsl.bat para garantir que o WSL esteja corretamente instalado e configurado.
 
-### Script enable_wsl.bat
+### Script `wsl_enable_install.bat`
 Este script realiza os seguintes passos:
 
-Verifica se está sendo executado com permissões de administrador;
-
-Habilita o recurso WSL no Windows;
-
-Ativa a Plataforma de Máquina Virtual;
-
-Define o WSL 2 como padrão;
-
-Instala a distribuição padrão (Ubuntu).
+- Verifica se está sendo executado com permissões de administrador;
+- Habilita o recurso WSL no Windows;
+- Ativa a Plataforma de Máquina Virtual;
+- Define o WSL 2 como padrão;
+- Instala a distribuição padrão (Ubuntu).
 
 ### Como executar:
 
-Execute o script `enable_wsl.bat`;
-
 Clique com o botão direito e execute como Administrador:
+
+Execute o script `wsl_enable_install.bat`;
 
 ## Uso
 
@@ -33,15 +33,27 @@ Clique com o botão direito e execute como Administrador:
 
 #### Download e Preparação do Script
 
-Baixe o script `prepare_server.bash` e certifique-se de que ele possui permissões de execução:
+Baixe o script `setup_client.bash` e certifique-se de que ele possui permissões de execução:
 
 ```bash
-chmod +x prepare_server.bash
-sudo ./prepare_server.bash
+chmod +x setup_client.bash
+sudo ./setup_client.bash
 ```
 O script cria um arquivo de configuração `config.cfg`
 
-LOG_FILE: Arquivo de log.
+### Estrutura do Arquivo de Configuração (config.cfg) - Exemplo
+
+O arquivo `config.cfg` deve ter a seguinte estrutura(Caso o script não consiga detectar automaticamente algumas configurações, você pode editar o arquivo config.cfg manualmente para ajustar os parâmetros conforme necessário):
+
+```plaintext
+DEVICE="/dev/sr0"               # Dispositivo de CD/DVD(Em ambiente WSL, por exemplo, seria "D:")
+FS_TYPE="iso9660"               # Tipo de sistema de arquivos
+MOUNT_POINT="/mnt/dvd"          # Ponto de montagem da mídia
+STORAGE_MOUNT="/mnt/dados"      # Ponto de montagem da storage
+STORAGE_IP="192.168.1.100"      # Endereço IP da storage
+WORKING_DIRECTORY="/home/user/media-data-restore/$(hostname)"  # Diretório de trabalho(Cópia dos dados do DVD)
+LOG_FILE="/home/user/media-data-restore/$(hostname)/log.txt"   # Arquivo de log
+```
 
 ## Execução do Script copiar.bash
 
@@ -65,7 +77,7 @@ O script `copiar.bash` realiza uma cópia em massa de dados de DVDs para a máqu
 ### Passo a Passo para Executar o Script copiar.bash
 
 1. **Preparação**
-   - Certifique-se de que o script `prepare_server.bash` foi executado com sucesso e que todas as dependências e configurações estão corretas.
+   - Certifique-se de que o script `setup_client.bash` foi executado com sucesso e que todas as dependências e configurações estão corretas.
 
 2. **Verificação do Arquivo de Configuração**
    - Verifique se o arquivo `config.cfg` contém as informações corretas sobre o dispositivo de CD/DVD, pontos de montagem, diretório de trabalho e endereço IP do servidor remoto.
@@ -84,15 +96,4 @@ O script `copiar.bash` realiza uma cópia em massa de dados de DVDs para a máqu
      sudo ./copiar.bash
      ```
 
-### Estrutura do Arquivo de Configuração (config.cfg)
 
-O arquivo `config.cfg` deve ter a seguinte estrutura(Caso o script não consiga detectar automaticamente algumas configurações, você pode editar o arquivo config.cfg manualmente para ajustar os parâmetros conforme necessário):
-
-```plaintext
-DEVICE="/dev/sr0"               # Dispositivo de CD/DVD
-FS_TYPE="iso9660"               # Tipo de sistema de arquivos
-MOUNT_POINT="/mnt/dvd"          # Ponto de montagem da mídia
-STORAGE_MOUNT="/mnt/dados"      # Ponto de montagem da storage
-STORAGE_IP="192.168.1.100"      # Endereço IP da storage
-WORKING_DIRECTORY="/home/user/media-data-restore/$(hostname)"  # Diretório de trabalho
-LOG_FILE="/home/user/media-data-restore/$(hostname)/log.txt"   # Arquivo de log
