@@ -13,7 +13,7 @@
 # Funciona em ambientes Linux e WSL. Sudo deve estar habilitado para o usuário.
 #
 # Data de Criação: 23/05/2024
-# Última Atualização: 04/07/2024
+# Última Atualização: 08/07/2025
 #
 # Uso:
 # ./copiar.bash [opções]
@@ -57,8 +57,10 @@ while true; do
         # Obter o rótulo/UUID da mídia/imagem
         check_dvd
         echo -e "\nO rótulo da mídia/imagem é: $DVD_LABEL"
-        echo_color -en "$YELLOW" "Insira o número identificador do DVD: "
-        read -r dvd_number
+        while [[ -z "$dvd_number" ]]; do
+            echo_color -en "$YELLOW" "Insira o número identificador do DVD (obrigatório): "
+            read -r dvd_number
+        done
         timestamp=$(date +"%Y%m%d_%H%M%S")
         createlog "------------------------------------------------------------------------------" "$LOG_FILE"
         createlog "ID: $dvd_number - UUID: $DVD_UUID - ID da execução: $timestamp" "$LOG_FILE"

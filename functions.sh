@@ -11,7 +11,7 @@
 # Arquivo de funções do script copiar.bash
 #
 # Data de Criação: 23/05/2024
-# Última Atualização: 04/07/2024
+# Última Atualização: 08/07/2025
 #
 ###############################################################################
 
@@ -27,7 +27,7 @@ load_config() {
         sleep 2
     else
         # Imprimir uma mensagem de erro e encerra o programa
-        echo_color -e "$RED" "\n****Arquivo de configuração $CONFIG_FILE não encontrado. Por favor, execute ./prepare_server.bash para criá-lo.\n"
+        echo_color -e "$RED" "\n****Arquivo de configuração $CONFIG_FILE não encontrado. Por favor, execute ./setup_client.bash para criá-lo.\n"
         exit 1
     fi
 }
@@ -182,11 +182,15 @@ get_dvd_label() {
     fi
 }
 
-check_dvd() {
-    # Get the UUID of the DVD
+
+#Objetivo geral:
+#Evitar processar DVDs duplicados e permitir ao usuário decidir como proceder quando um DVD já conhecido for detectado.
+check_dvd() {    
     local device="$DEVICE"
+
     DVD_UUID=$(get_dvd_uuid "$device")
     DVD_LABEL=$(get_dvd_label "$device")
+
     if [ -z "$DVD_UUID" ]; then
         echo "Não foi possível ler o UUID do DVD. Terminando..."
         exit 1
@@ -195,19 +199,22 @@ check_dvd() {
     if [ ! -f "$READ_DVDS_FILE" ]; then
         touch "$READ_DVDS_FILE"
     fi
+
     # Check if the UUID is already in the read list
     if grep -q "$DVD_UUID" "$READ_DVDS_FILE"; then
         DVD=$(grep "$DVD_UUID" "$READ_DVDS_FILE" | tail -n 1 | awk -F'|' '{print $1}' | cut -d':' -f2)
+
         echo_color -e "$YELLOW" "ATENÇÃO!!! DVD $DVD com UUID $DVD_UUID já foi registrado como lido/restaurado anteriormente. Pressione q para sair ou aguarde para realizar a operação de cópia novamente..."
         echo_color -e "$YELLOW" "Pressione 'q' para sair..."
         echo_color -e "$YELLOW" "Pressione 'B' para realizar backup (ISO + cópia no DVD novo)..."
         echo_color -e "$YELLOW" "Pressione 'L' para limpar registros deste DVD nesta máquina..."
+
         # Verificar se o usuário pressionou Enter para encerrar o programa
         read -r -s -n 1 -t 5 input
-        if [[ $input = "q" ]]; then
-            echo -e "\nPrograma encerrado pelo usuário."
-            exit 0
-        fi
+        case "$input" in
+            q|Q) echo -e "\nPrograma encerrado pelo usuário."; exit 0 ;;
+            # 'B' e 'L' serão tratados depois, se necessário
+        esac
     fi
 }
 # Função para verificar se o dispositivo está montado
@@ -224,22 +231,22 @@ dispositivo_montado() {
 }
 
 copy_from() {
-    rm -rf $err_local # Se há um diretório deste dvd com erro marcado, ele é apagado
+    rm -rf "$err_local" # Se há um diretório deste dvd com erro marcado, ele é apagado
     copy_start_time=$(date +%s)
     total_files=$(ls -1 "$MOUNT_POINT/product_raw/"*.RAW* 2>/dev/null | wc -l) #Busca o numero de arquivos RAW no DVD
     echo "Copiando dados do DVD($total_files encontrados)..."
     #cp $MOUNT_POINT/product_raw/* .
-    RSYNC_ERROR=$(rsync -rh --info=progress2 --ignore-existing $MOUNT_POINT/product_raw/ $local 2>/dev/null) #Faz a cópia local do DVD     
+    RSYNC_ERROR=$(rsync -rh --info=progress2 --ignore-existing "$MOUNT_POINT/product_raw/" "$local" 2>/dev/null) #Faz a cópia local do DVD     
     if [ $? -eq 0 ]; then
         copy_end_time=$(date +%s)
         copy_execution_time=$((copy_end_time - copy_start_time))
-        createlog "Cópia local do DVD realizada com sucesso de $DEVICE($copy_execution_time s)" "$LOG_FILE"
+        createlog "Cópia local do DVD realizada com sucesso de $DEVICE após $copy_execution_time s" "$LOG_FILE"
         echo "DVD com UUID $DVD_UUID adicionado a lista de DVD's lidos."
         echo "DVD:$dvd_number|UUID:$DVD_UUID|" >>"$READ_DVDS_FILE"
     else
         copy_end_time=$(date +%s)
         copy_execution_time=$((copy_end_time - copy_start_time))
-        createlog "A cópia $local foi mal-executada após $copy_execution_time s)" "$LOG_FILE"
+        createlog "A cópia $local foi mal-executada após $copy_execution_time s" "$LOG_FILE"
         echo "[ERRO] rsync falhou com a seguinte mensagem:"
         echo "$RSYNC_ERROR"
         mv "$local" "$err_local" #Move a tentativa de leitura do DVD para a pasta ERR_DVD_UUID
@@ -349,7 +356,8 @@ EOF
 # Função para ejetar o dispositivo
 ejetar_midia() {
     local mount_point="$1"
-    local device="$2"    
+    local device="$2"
+
         if is_wsl; then
             powershell.exe -Command '(New-Object -ComObject Shell.Application).NameSpace(17).ParseName("D:").InvokeVerb("Eject")'
         else
@@ -360,6 +368,7 @@ ejetar_midia() {
                 echo "Falha ao ejetar o dispositivo $device."
             fi                        
         fi
+
         if [ $? -eq 0 ]; then
             echo "Dispositivo $device ejetado com sucesso."
         else
@@ -377,9 +386,10 @@ process_var() {
     local dir="$2"
     local fn="$3"
     local LOG_FILE="$4"
-    local prod
-    local cidade
-    local folder
+    
+    local prod cidade folder
+
+
 
     # Determina o tipo de produto contido do dado bruto
     case "$var" in
