@@ -56,6 +56,7 @@ while true; do
         check_disk_space "$DEVICE"        
         # Obter o rótulo/UUID da mídia/imagem
         check_dvd
+        dvd_number=""
         echo -e "\nO rótulo da mídia/imagem é: $DVD_LABEL"
         while [[ -z "$dvd_number" ]]; do
             echo_color -en "$YELLOW" "Insira o número identificador do DVD (obrigatório): "

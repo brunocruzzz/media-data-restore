@@ -481,7 +481,7 @@ data_deploy() {
     rsync -rh --info=progress2 $from $MACHINE_FOLDER
     if [ $? -eq 0 ]; then        
         createlog "Transferência de dados concluída com sucesso para '$MACHINE_FOLDER'." "$LOG_DEPLOY"
-        createlog "$dvd_number|$TAG |-----> Upload de dados(Rodada $RUN) realizado com sucesso" "$LOG_DEPLOY"
+        createlog "$dvd_number|$TAG |-----> Upload de dados(Rodada $RUN) realizado com sucesso." "$LOG_DEPLOY"
         FLAG_OK=$MACHINE_FOLDER/$(basename $from)/DIR_OK
         touch $FLAG_OK        
     else
