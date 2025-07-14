@@ -32,7 +32,7 @@ if [ $? -eq 0 ]; then
     data_deploy $RUN
 else
     echo "Erro na montagem. Dados não enviados..."
-    createlog "Erro na montagem. Dados $TAG não enviados..." "$LOG_DEPLOY"
+    createlog "[ERROR} Erro na montagem. Dados $TAG não enviados..." "$LOG_DEPLOY"
 fi
 echo ""
 # Ensure the script ends cleanly

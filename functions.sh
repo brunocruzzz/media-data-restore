@@ -83,7 +83,7 @@ check_disk_space() {
     local data_mount_point="$1"
 
 	if is_wsl; then
-		data_mount_point=$(echo "$data_mount_point" | sed -E 's|^([A-Za-z]):$|/mnt/\L\1|')
+		data_mount_point=$(echo "$data_mount_point" | sed -E 's|^([A-Za-z]):$|/mnt/\L\1|')        
 	fi
 
     local required_space=$(df --block-size=1 "$data_mount_point" | awk 'NR==2 {print $3}')
@@ -92,10 +92,11 @@ check_disk_space() {
 	
 	if is_wsl; then
 		local windows_home_winpath=$(powershell.exe -NoProfile -Command '[Environment]::GetEnvironmentVariable("USERPROFILE")' | tr -d '\r')
-		local disk="/mnt/$(echo "$windows_home_winpath" | sed -E 's|^([A-Za-z]):|\L\1|;s|\\|/|g')"
+		local disk="/mnt/$(echo "$windows_home_winpath" | sed -E 's|^([A-Za-z]):|\L\1|;s|\\|/|g')"        
 	else
 		local disk="$WORKING_DIRECTORY"	
 	fi
+    sudo mkdir -p "$disk"
     local free_space=$(df --block-size=1 "$disk" | awk 'NR==2 {print $4}')
     local readable_free_space=$(df -h "$disk" | awk 'NR==2 {print $4}')
 	echo "tamanho em $disk"
@@ -103,10 +104,12 @@ check_disk_space() {
 	echo "Espaço a ser utilizado em $disk: $readable_required_space em $readable_free_space"
 
     if ((free_space < required_space)); then
+        createlog "[ERROR] Espaço em disco insuficiente: $readable_free_space disponível. São necessários $readable_required_space." "$LOG_FILE"
         echo_color -e "$RED" "Espaço em disco insuficiente ($readable_free_space). São necessários $readable_required_space.\n Verifique se existem dados a serem catalogados e enviados e então, execute uma limpeza usando o comando:"
         echo_color -e "$YELLOW" "./clean.bash clean"
         exit 1
     else
+        createlog "[INFO] Espaço em disco local suficiente: $readable_free_space disponível." "$LOG_FILE"
         echo "Espaço em disco local suficiente: $readable_free_space disponível."
     fi
 }
@@ -191,7 +194,9 @@ check_dvd() {
 
     DVD_UUID=$(get_dvd_uuid "$device")
     DVD_LABEL=$(get_dvd_label "$device")
-
+    
+    echo -e "\nO rótulo da mídia/imagem é: $DVD_LABEL"
+    
     if [ -z "$DVD_UUID" ]; then
         echo "Não foi possível ler o UUID do DVD. Terminando..."
         exit 1
@@ -205,8 +210,9 @@ check_dvd() {
     if grep -q "$DVD_UUID" "$READ_DVDS_FILE"; then
         DVD=$(grep "$DVD_UUID" "$READ_DVDS_FILE" | tail -n 1 | awk -F'|' '{print $1}' | cut -d':' -f2)
 
-        echo_color -e "$YELLOW" "ATENÇÃO!!! DVD $DVD com UUID $DVD_UUID já foi registrado como lido/restaurado anteriormente. Pressione q para sair ou aguarde para realizar a operação de cópia novamente..."
-        echo_color -e "$YELLOW" "Pressione 'q' para sair..."
+        echo_color -e "$YELLOW" "ATENÇÃO!!! DVD $DVD com UUID $DVD_UUID já foi registrado como lido/restaurado anteriormente neste cliente. Pressione q para sair ou aguarde para realizar a operação de cópia novamente..."
+        echo_color -e "$YELLOW" "Pressione 'q' para sair do programa..."
+        echo_color -e "$YELLOW" "Pressione 'F' para enviar novamente[Force]..."
         echo_color -e "$YELLOW" "Pressione 'B' para realizar backup (ISO + cópia no DVD novo)..."
         echo_color -e "$YELLOW" "Pressione 'L' para limpar registros deste DVD nesta máquina..."
 
@@ -252,7 +258,7 @@ copy_from() {
         echo "[ERROR] rsync falhou com a seguinte mensagem:"
         echo "$RSYNC_ERROR"
         mv "$local" "$err_local" #Move a tentativa de leitura do DVD para a pasta ERR_DVD_UUID
-        echo "Diretório renomeado para $err_local devido a falha/erro durante a cópia. Contate o TI para verificação."
+        echo "Diretório renomeado para $err_local devido a falha/erro durante a cópia. Talvez a mídia ou o leitor de mídia estejam com problemas. Verifique se o erro persiste. Contate o TI para verificação."
         exit 1
     fi
 }
