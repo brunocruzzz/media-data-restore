@@ -134,7 +134,7 @@ monta_device() {
 			opts=(-t drvfs)
 		fi
         # Tenta montar o dispositivo no ponto de montagem especificado	
-        echo "sudo mount "${opts[@]}" "$DEVICE" "$MOUNT_POINT""
+        createlog "[DEBUG] Executando: sudo mount \"${opts[@]}\" \"$DEVICE\" \"$MOUNT_POINT\"" "$LOG_FILE"
         if sudo mount "${opts[@]}" "$DEVICE" "$MOUNT_POINT" >/dev/null 2>&1; then
             echo "Dispositivo $DEVICE montado com sucesso em $MOUNT_POINT."
         else
@@ -165,10 +165,10 @@ monta_iso() {
 }
 # Function to get the UUID of the DVD
 get_dvd_uuid() {
+    local device="$DEVICE"
     if is_wsl; then
-        powershell.exe -Command "(Get-Item -Path D:\).CreationTime.ToString('yyyy-MM-dd_HH-mm-ss-ff')" | tr -d '\r'
-    else
-        local device="$DEVICE"
+        powershell.exe -Command "(Get-Item -Path "$device"\).CreationTime.ToString('yyyy-MM-dd_HH-mm-ss-ff')" | tr -d '\r'
+    else        
         blkid "$device" | grep -oP 'UUID="\K[^"]+'
     fi
 }
