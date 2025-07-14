@@ -353,7 +353,7 @@ EOF
         echo "Apagando diretórios marcados com erro..."
         rm -rf "$err_local"
         echo "Enviando DVD $dvd_number para a storage..."
-        ./sending_data.bash "$catalog/$FTAG" "$FTAG" > /dev/null && echo_color -e "$GREEN" "Upload DVD $dvd_number completo" &
+        ./sending_data.bash "$catalog/$FTAG" "$FTAG" > /dev/null && echo "" && echo_color -e "$GREEN" "Upload DVD $dvd_number completo" && echo "" &
     fi
 }
 # Função para ejetar o dispositivo
