@@ -64,7 +64,7 @@ while true; do
         done
         timestamp=$(date +"%Y%m%d_%H%M%S")
         createlog "------------------------------------------------------------------------------" "$LOG_FILE"
-        createlog "ID: $dvd_number - UUID: $DVD_UUID - ID da execução: $timestamp" "$LOG_FILE"
+        createlog "[INFO] ID: $dvd_number - UUID: $DVD_UUID - ID da execução: $timestamp" "$LOG_FILE"
         #echo "ID: $dvd_number - UUID: $DVD_UUID - ID da execução: $timestamp" | tee -a "$LOG_FILE"
         
         ###########################################################################################################
@@ -94,7 +94,7 @@ while true; do
         catalog "$local" & disown
         # Final outputs
         #echo "Fim da rodada $ok_local" | tee -a $LOG_FILE
-        createlog "Fim da rodada $ok_local" $LOG_FILE        
+        createlog "[INFO] Fim da rodada $ok_local" $LOG_FILE        
         #sudo umount $MOUNT_POINT
             
     else
