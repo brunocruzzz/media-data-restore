@@ -132,9 +132,10 @@ monta_device() {
 		echo "Dispositivo não está montado. Montando..."
 		if is_wsl; then
 			opts=(-t drvfs)
-		fi
+		fi  
         # Tenta montar o dispositivo no ponto de montagem especificado	
-        createlog "[DEBUG] Executando: sudo mount \"${opts[@]}\" \"$DEVICE\" \"$MOUNT_POINT\"" "$LOG_FILE"
+        cmd="sudo mount ${opts[*]} \"$DEVICE\" \"$MOUNT_POINT\""
+        createlog "[DEBUG] Executando: $cmd" "$LOG_FILE"
         if sudo mount "${opts[@]}" "$DEVICE" "$MOUNT_POINT" >/dev/null 2>&1; then
             echo "Dispositivo $DEVICE montado com sucesso em $MOUNT_POINT."
         else
