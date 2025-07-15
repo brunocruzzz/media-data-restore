@@ -26,10 +26,16 @@ if [ -n "$2" ]; then
     TAG=$2
     echo $2
 fi
+
+if [ -n "$3" ]; then
+    dvd_number=$3
+    echo $3
+fi
+
 sleep 3
 monta_storage
 if [ $? -eq 0 ]; then 
-    data_deploy $RUN
+    data_deploy $RUN $dvd_number
 else
     echo "Erro na montagem. Dados não enviados..."
     createlog "Erro na montagem. Dados $TAG não enviados..." "$LOG_DEPLOY"
