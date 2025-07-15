@@ -52,6 +52,9 @@ Clique com o botão direito e execute como Administrador:
 
 Execute o script `wsl_enable_install.bat`;
 
+Você pode baixar o script diretamente aqui:  
+[wsl_enable_install.bat](./wsl_enable_install.bat)
+
 ## Uso
 
 ### Passo a Passo
