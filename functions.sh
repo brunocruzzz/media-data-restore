@@ -300,6 +300,13 @@ EOF
             #Agora podemos manusear os dados de uma maneira mais prática
             #Usar um -verbose para exibir os cabeçalhos[opcional]
             #echo "$var" # aspas garantem o formato adequado para output[quebra de linhas]
+            if [[ -z "$var" ]]; then
+                createlog "[ERROR] Não foi possível ler caveçalho de dados do arquivo $fn." "$LOG_FILE"
+                createlog "[ERROR] $dvd_number | Arquivo '$fn' não tem cabeçalho válido." "$LOG_DVD_FILES"
+                ((count++))
+                rm -f "$fn"
+                continue
+            fi
             gen_time=$(echo "$var" | grep "Ingest time:")
             dir=$(echo "$gen_time" | awk '{print $4 $5 $6}')
             dir=$(date -d "$dir 12" +%Y%m%d)
@@ -320,9 +327,14 @@ EOF
             fi
 
             ############################################################################################################
-            # Verifica o produto
+            # Verifica o produto e cataloga de acordo com o produto e a cidade associada.
+            #Por exemplo: 
+            #surveillances de Bauru são armazenados em surbru
+            #volumescan de Prudente são armazenados em volppr
+            
+            #logo a estrutura fica como por exemplo, volppr/YYYMMDD/
             folder=$(process_var "$var" "$dir" "$fn" "$LOG_FILE")
-            #echo "Folder: $folder"
+            #Na pasta definida o arquivo RAW é movido.
 
             #echo "MOVENDO PARA $folder/$dir/$fn" # DEBUG CONTROL
             #echo "movendo para $WORKING_DIRECTORY/local/$DVD_UUID/$folder/$fn"
@@ -360,17 +372,31 @@ EOF
     if [[ $total_files -gt $total_dados ]]; then
         num_error_files=$((total_files - total_dados))
         # Verifica diferenças: arquivos que estão no DVD mas não foram copiados
-        createlog "[DEBUG] Executando comando: 'comm -23 /tmp/total_dvd.txt /tmp/total_local.txt'" "$LOG_FILE"
-        missing_files=$(comm -23 /tmp/total_dvd.txt /tmp/total_local.txt)
+        createlog "[DEBUG] Executando comando: 'comm -23   <(sort /tmp/total_dvd.txt | xargs -n1 basename | sort)   <(sort /tmp/total_local.txt | xargs -n1 basename | sort)'" "$LOG_FILE"
+        missing_files=$(comm -23   <(sort /tmp/total_dvd.txt | xargs -n1 basename | sort)   <(sort /tmp/total_local.txt | xargs -n1 basename | sort))
         if [[ -n "$missing_files" ]]; then
             echo "❌ Arquivos faltando na cópia:"
             echo "$missing_files"
-            createlog "[ERROR] $TAG | Arquivos faltando na cópia:\n$missing_files" "$LOG_FILE"
+            # Para cada linha (arquivo) em missing_files
+            while IFS= read -r missing_file; do
+                createlog "[ERROR] $TAG | Arquivo faltando na cópia: $missing_file" "$LOG_DVD_FILES"
+            done <<< "$missing_files"
         else
             echo "✅ Todos os arquivos do DVD foram copiados com sucesso."
         fi
         echo "Operação realizada com erro. Alguns arquivos não foram restaurados. $num_error_files arquivos faltantes/com problema."
-        createlog "[ERROR] $TAG | Operação realizada com erro. Alguns arquivos não foram restaurados. $num_error_files arquivos faltantes/com problema." "$LOG_FILE"
+        createlog "[ERROR] $TAG | Operação realizada com erro. Alguns arquivos não foram restaurados. $num_error_files arquivos faltantes/com problema. Confira o arquivo de log $LOG_DVD_FILES" "$LOG_FILE"
+        catalog="$WORKING_DIRECTORY/catalog"
+        mkdir -p $catalog
+        echo "Movendo de $local para $catalog"
+        mv "$local" "$catalog/$FTAG"
+        #tree -d "$catalog/$FTAG"
+        if [ -n "$err_local" ] && [ -d "$err_local" ]; then
+            echo "Removendo diretório com erro anterior: $err_local"
+            rm -rf -- "$err_local"
+        fi
+        echo "Enviando DVD $dvd_number para a storage..."
+        ./sending_data.bash "$catalog/$FTAG" "$FTAG" "$dvd_number" > /dev/null && echo "" && echo_color -e "$YELLOW" "Upload DVD $dvd_number completo(com RESTRIÇÕES, confira $LOG_DVD_FILES. Execute a restauração da mídia backup.)" && echo "" &
     else
         createlog "[INFO] $TAG | Dados catalogados com sucesso! $timestamp: $total_dados arquivos restaurados. $count arquivos vazios." "$LOG_FILE"
         catalog="$WORKING_DIRECTORY/catalog"
@@ -378,8 +404,10 @@ EOF
         echo "Movendo de $local para $catalog"
         mv "$local" "$catalog/$FTAG"
         #tree -d "$catalog/$FTAG"
-        echo "Apagando diretórios marcados com erro..."
-        rm -rf "$err_local"
+        if [ -n "$err_local" ] && [ -d "$err_local" ]; then
+            echo "Removendo diretório com erro anterior: $err_local"
+            rm -rf -- "$err_local"
+        fi
         echo "Enviando DVD $dvd_number para a storage..."
         ./sending_data.bash "$catalog/$FTAG" "$FTAG" "$dvd_number" > /dev/null && echo "" && echo_color -e "$GREEN" "Upload DVD $dvd_number completo" && echo "" &
     fi
