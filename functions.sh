@@ -359,7 +359,7 @@ EOF
         echo "Apagando diretórios marcados com erro..."
         rm -rf "$err_local"
         echo "Enviando DVD $dvd_number para a storage..."
-        ./sending_data.bash "$catalog/$FTAG" "$FTAG" > /dev/null && echo_color -e "$GREEN" "Upload DVD $dvd_number completo" &
+        ./sending_data.bash "$catalog/$FTAG" "$FTAG" "$dvd_number" > /dev/null && echo "" && echo_color -e "$GREEN" "Upload DVD $dvd_number completo" && echo "" &
     fi
 }
 # Função para ejetar o dispositivo
@@ -478,6 +478,7 @@ monta_storage() {
 
 data_deploy() {
     local from=$1
+    local dvd_number=$2    
     MACHINE_FOLDER="$STORAGE_MOUNT_POINT/$MACHINE_NAME"
     echo "Verificando o diretório $MACHINE_FOLDER em $STORAGE_MOUNT_POINT na storage para receber dados da máquina local $MACHINE_NAME..."
     echo "Destino NFS: $STORAGE_IP:$STORAGE_PATH"
@@ -492,9 +493,11 @@ data_deploy() {
     rsync -rh --info=progress2 "$from" "$MACHINE_FOLDER"
     if [ $? -eq 0 ]; then        
         createlog "[INFO] Transferência de dados concluída com sucesso para '$MACHINE_FOLDER'." "$LOG_DEPLOY"
-        createlog "[INFO] $dvd_number|$TAG|-----> Upload de dados(Rodada $RUN) realizado com sucesso." "$LOG_DEPLOY"
+        createlog "[INFO] |$dvd_number|$TAG|-----> Upload de dados(Rodada $RUN) realizado com sucesso." "$LOG_DEPLOY"
+        #Esta flag é usada para indicar que o upload foi bem-sucedido, e no servidor,será verificado se o diretório contém esta flag para poder mover para a remessa(diretório) para o repositório final.
         FLAG_OK=$MACHINE_FOLDER/$(basename $from)/DIR_OK
-        touch $FLAG_OK        
+        echo "$dvd_number" > "$FLAG_OK"
+        echo_color -e "$GREEN" "Dados do DVD $dvd_number enviados com sucesso para o servidor NFS."
     else
         createlog "[ERROR] Falha na transferência de dados para '$MACHINE_FOLDER'. Verifique os logs para mais detalhes." "$LOG_DEPLOY"
         echo_color -en "$RED" "Contate o suporte de TI para permissão de upload para o servidor."
