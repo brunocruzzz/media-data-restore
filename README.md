@@ -96,4 +96,8 @@ O script `copiar.bash` realiza uma cópia em massa de dados de DVDs para a máqu
      sudo ./copiar.bash
      ```
 
+### Autores
 
+- Bruno da Cruz Bueno
+- Jaqueline Murakami Kokitsu
+- Simone Cincotto Carvalho
