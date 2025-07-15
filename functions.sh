@@ -1,18 +1,15 @@
 #!/bin/bash
 ###############################################################################
-# Script de Restauração de Dados de DVDs
+# Script: funções_utilitárias.sh
+# Descrição: Funções auxiliares para copiar.bash no processo de restauração.
 #
-# Autor(es):
-# - Bruno da Cruz Bueno
-# - Jaqueline Murakami Kokitsu
-# - Simone Cincotto Carvalho
+# Uso: Importado por outros scripts. Não deve ser executado diretamente.
+# Dependências: rsync, sudo, sistema de arquivos NFS montável.
 #
-# Descrição:
-# Arquivo de funções do script copiar.bash
+# Exemplo de uso (em copiar.bash):
+#   source ./functions.sh
 #
-# Data de Criação: 23/05/2024
-# Última Atualização: 08/07/2025
-#
+# Segurança: Certifique-se de que o usuário tenha permissões adequadas.
 ###############################################################################
 
 # DEFINIÇÃO DAS FUNÇÕES
@@ -115,11 +112,14 @@ check_disk_space() {
 }
 
 monta_device() {
+
     echo "Montando o dispositivo $DEVICE em $MOUNT_POINT com o sistema de arquivos $FS_TYPE..."
+
+    # Desmonta o ponto de montagem se já estiver montado
     if mountpoint -q "$MOUNT_POINT"; then
         sudo umount "$MOUNT_POINT"
     fi	
-    # Verificar se o ponto de montagem existe, caso contrário, criar
+    # Cria o ponto de montagem, se não existir
     if [ ! -d "$MOUNT_POINT" ]; then
         echo "Criando ponto de montagem..."
         sudo mkdir -p "$MOUNT_POINT"
@@ -136,12 +136,14 @@ monta_device() {
 		if is_wsl; then
 			opts=(-t drvfs)
 		fi  
-        # Tenta montar o dispositivo no ponto de montagem especificado	
+        
+        # Monta o dispositivo no ponto de montagem
         cmd="sudo mount ${opts[*]} \"$DEVICE\" \"$MOUNT_POINT\""
         createlog "[DEBUG] Executando: $cmd" "$LOG_FILE"
         if sudo mount "${opts[@]}" "$DEVICE" "$MOUNT_POINT" >/dev/null 2>&1; then
             echo "Dispositivo $DEVICE montado com sucesso em $MOUNT_POINT."
         else
+            # Loga e exibe erro em caso de falha no processo de montagem
             createlog "[ERROR] Falha ao montar o dispositivo $DEVICE em $MOUNT_POINT." "$LOG_FILE"
             echo_color -e "$RED" "Verifique se o DVD foi inserido corretamente..."
             ejetar_midia "$MOUNT_POINT" "$DEVICE" 
@@ -149,6 +151,7 @@ monta_device() {
         fi
     fi	
 }
+
 monta_iso() {
     local iso=$1
     if mountpoint -q "$MOUNT_POINT"; then
@@ -167,7 +170,8 @@ monta_iso() {
         exit 1
     fi
 }
-# Function to get the UUID of the DVD
+
+# Obtém o UUID do DVD
 get_dvd_uuid() {
     local device="$DEVICE"
     if is_wsl; then
@@ -176,7 +180,8 @@ get_dvd_uuid() {
         blkid "$device" | grep -oP 'UUID="\K[^"]+'
     fi
 }
-# Function to get the label of the DVD
+
+# Obtém o rótulo (label) do DVD
 get_dvd_label() {
     if is_wsl; then
         powershell.exe "(Get-Volume -DriveLetter D).FileSystemLabel"
@@ -238,9 +243,15 @@ dispositivo_montado() {
 }
 
 copy_from() {
-    rm -rf "$err_local" # Se há um diretório deste dvd com erro marcado, ele é apagado
+    #no inicio da rodada, se há um diretório deste dvd(uuid) com erro marcado, ele é apagado
+    # No início da rodada, remove o diretório de erro anterior associado a este DVD (UUID), se existir
+    if [ -n "$err_local" ] && [ -d "$err_local" ]; then
+        echo "Removendo diretório com erro anterior: $err_local"
+        rm -rf -- "$err_local"
+    fi
     copy_start_time=$(date +%s)
     total_files=$(ls -1 "$MOUNT_POINT/product_raw/"*.RAW* 2>/dev/null | wc -l) #Busca o numero de arquivos RAW no DVD
+    find "$MOUNT_POINT/product_raw/" -type f -iname '*.RAW*' | sort > /tmp/total_dvd.txt
     echo "Copiando dados do DVD($total_files encontrados)..."
     #cp $MOUNT_POINT/product_raw/* .
     createlog "[DEBUG] Executando: rsync -rh --info=progress2 --ignore-existing \"$MOUNT_POINT/product_raw/\" \"$local\"" "$LOG_FILE"
@@ -337,6 +348,7 @@ EOF
     createlog "[INFO] Tempo de catalogação ($move_execution_time s)" "$LOG_FILE"
     echo "Tempo de catalogação ($move_execution_time s)"
     total_dados=$(find "$local" -type f | wc -l)
+    find "$local" -type f -name "*.RAW*" | sort > /tmp/total_local.txt
     if [ -d "$local/indefinido" ]; then
         indefinidos=$(find "$local/indefinido" -type f | wc -l)
         echo_color -e "$RED" "Total de arquivos indefinidos neste DVD: ($indefinidos). Contate o suporte de TI e informe o identificador $dvd_number do DVD."
@@ -347,6 +359,16 @@ EOF
 
     if [[ $total_files -gt $total_dados ]]; then
         num_error_files=$((total_files - total_dados))
+        # Verifica diferenças: arquivos que estão no DVD mas não foram copiados
+        createlog "[DEBUG] Executando comando: 'comm -23 /tmp/total_dvd.txt /tmp/total_local.txt'" "$LOG_FILE"
+        missing_files=$(comm -23 /tmp/total_dvd.txt /tmp/total_local.txt)
+        if [[ -n "$missing_files" ]]; then
+            echo "❌ Arquivos faltando na cópia:"
+            echo "$missing_files"
+            createlog "[ERROR] $TAG | Arquivos faltando na cópia:\n$missing_files" "$LOG_FILE"
+        else
+            echo "✅ Todos os arquivos do DVD foram copiados com sucesso."
+        fi
         echo "Operação realizada com erro. Alguns arquivos não foram restaurados. $num_error_files arquivos faltantes/com problema."
         createlog "[ERROR] $TAG | Operação realizada com erro. Alguns arquivos não foram restaurados. $num_error_files arquivos faltantes/com problema." "$LOG_FILE"
     else
