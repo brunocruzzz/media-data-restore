@@ -18,7 +18,8 @@ echo Ativando o recurso Plataforma de Máquina Virtual...
 dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
 
 :: (Opcional) Ativa o recurso de Plataforma de Máquina Virtual para Hyper-V se desejar suporte completo
-:: dism.exe /online /enable-feature /featurename:Microsoft-Hyper-V-All /all /norestart
+echo Ativando o recurso Hyper-V...
+dism.exe /online /enable-feature /featurename:Microsoft-Hyper-V-All /all /norestart
 
 :: Define o WSL 2 como padrão
 echo Definindo o WSL 2 como padrão...
