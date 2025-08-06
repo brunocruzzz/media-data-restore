@@ -61,7 +61,7 @@ while true; do
             echo_color -en "$YELLOW" "Insira o número identificador do DVD (obrigatório): "
             read -r dvd_number
         done
-        LOG_DVD_FILES="$WORKING_DIRECTORY/../logs/$dvd_number.txt"
+        LOG_DVD_FILES="$(dirname "$READ_DVDS_FILE")/$dvd_number.txt"
         touch "$LOG_DVD_FILES"
         timestamp=$(date +"%Y%m%d_%H%M%S")
         createlog "------------------------------------------------------------------------------" "$LOG_FILE"

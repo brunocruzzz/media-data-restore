@@ -265,11 +265,13 @@ copy_from() {
     else
         copy_end_time=$(date +%s)
         copy_execution_time=$((copy_end_time - copy_start_time))
-        createlog "[ERROR] A cópia $local foi mal-executada após $copy_execution_time s" "$LOG_FILE"
+        total_dados=$(find "$local" -type f | wc -l)
+        createlog "[ERROR] A cópia $local foi mal-executada após $copy_execution_time s. $total_dados de $total_files foram copiados do DVD para o disco." "$LOG_FILE"
         echo "[ERROR] rsync falhou com a seguinte mensagem:"
         echo "$RSYNC_ERROR"
         mv "$local" "$err_local" #Move a tentativa de leitura do DVD para a pasta ERR_DVD_UUID
-        echo "Diretório renomeado para $err_local devido a falha/erro durante a cópia. Talvez a mídia ou o leitor de mídia estejam com problemas. Verifique se o erro persiste. Contate o TI para verificação."
+        echo "Diretório renomeado para $err_local devido a falha/erro durante a cópia." 
+        echo_color -e "$RED" "Talvez a mídia ou o leitor de mídia estejam com problemas. Verifique se o erro persiste. Contate o TI para verificação."
         exit 1
     fi
 }
@@ -301,7 +303,7 @@ EOF
             #Usar um -verbose para exibir os cabeçalhos[opcional]
             #echo "$var" # aspas garantem o formato adequado para output[quebra de linhas]
             if [[ -z "$var" ]]; then
-                createlog "[ERROR] Não foi possível ler caveçalho de dados do arquivo $fn." "$LOG_FILE"
+                createlog "[ERROR] Não foi possível ler cabeçalho de dados do arquivo $fn." "$LOG_FILE"
                 createlog "[ERROR] $dvd_number | Arquivo '$fn' não tem cabeçalho válido." "$LOG_DVD_FILES"
                 ((count++))
                 rm -f "$fn"
@@ -338,6 +340,7 @@ EOF
 
             #echo "MOVENDO PARA $folder/$dir/$fn" # DEBUG CONTROL
             #echo "movendo para $WORKING_DIRECTORY/local/$DVD_UUID/$folder/$fn"
+
             #Move o arquivo para o respectivo diretório para armazenamento
             #mkdir -p $WORKING_DIRECTORY/$folder && mv $fn $_
             mkdir -p "$WORKING_DIRECTORY/local/$DVD_UUID/$folder" && mv -f "$fn" "$_"
@@ -361,14 +364,17 @@ EOF
     echo "Tempo de catalogação ($move_execution_time s)"
     total_dados=$(find "$local" -type f | wc -l)
     find "$local" -type f -name "*.RAW*" | sort > /tmp/total_local.txt
+    createlog "[INFO] Total de arquivos no DVD: $total_files" "$LOG_FILE"
+    createlog "[INFO] Total de arquivos copiados: $total_dados" "$LOG_FILE"
+    #Busca o número de arquivos classificados como indefinidos
     if [ -d "$local/indefinido" ]; then
         indefinidos=$(find "$local/indefinido" -type f | wc -l)
         echo_color -e "$RED" "Total de arquivos indefinidos neste DVD: ($indefinidos). Contate o suporte de TI e informe o identificador $dvd_number do DVD."
-        createlog "[ERROR] DVD $dvd_number teve falhas para catalogar um ou mais arquivos." "$LOG_FILE"
+        createlog "[WARNING] DVD $dvd_number teve falhas para catalogar um ou mais arquivos. Todos foram enviados para pasta indefinido e serão transmitidos." "$LOG_FILE"
     else
         echo_color -e "$BLUE" "Todos os arquivos foram classificados com sucesso."
-    fi
-
+    fi    
+    # Verifica se o número de arquivos copiados é menor que o número total de arquivos no DVD
     if [[ $total_files -gt $total_dados ]]; then
         num_error_files=$((total_files - total_dados))
         # Verifica diferenças: arquivos que estão no DVD mas não foram copiados
@@ -389,8 +395,7 @@ EOF
         catalog="$WORKING_DIRECTORY/catalog"
         mkdir -p $catalog
         echo "Movendo de $local para $catalog"
-        mv "$local" "$catalog/$FTAG"
-        #tree -d "$catalog/$FTAG"
+        mv "$local" "$catalog/$FTAG"        
         if [ -n "$err_local" ] && [ -d "$err_local" ]; then
             echo "Removendo diretório com erro anterior: $err_local"
             rm -rf -- "$err_local"
@@ -556,7 +561,7 @@ data_deploy() {
 createlog() {
     local message="$1"
     local logfile="$2"
-    echo $message
+    echo $message >&2
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $message" >>"$logfile"
 }
 #==========================================================================================
