@@ -63,6 +63,7 @@ while true; do
         done
         LOG_DVD_FILES="$(dirname "$READ_DVDS_FILE")/$dvd_number.txt"
         touch "$LOG_DVD_FILES"
+        
         timestamp=$(date +"%Y%m%d_%H%M%S")
         createlog "------------------------------------------------------------------------------" "$LOG_FILE"
         createlog "[INFO] ID: $dvd_number - UUID: $DVD_UUID - ID da execução: $timestamp" "$LOG_FILE"
@@ -87,15 +88,13 @@ while true; do
         #PROCESSO DE CÓPIA
         ############################################################################################################
         copy_from     
-        sleep 3
-        ejetar_midia "$MOUNT_POINT" "$DEVICE" 
+        sleep 2        
         ############################################################################################################
         #PROCESSO DE CATALOGO E ORGANIZAÇÃO LOCAL
         ############################################################################################################
-        catalog "$local" & disown
-        # Final outputs
-        #echo "Fim da rodada $ok_local" | tee -a $LOG_FILE
-        createlog "[INFO] Fim da rodada $ok_local" $LOG_FILE        
+        catalog "$local" & disown        
+        createlog "[INFO] Fim do processo de cópia da rodada $ok_local" $LOG_FILE        
+        ejetar_midia "$MOUNT_POINT" "$DEVICE" 
         #sudo umount $MOUNT_POINT
             
     else

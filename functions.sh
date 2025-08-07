@@ -71,9 +71,16 @@ is_wsl(){
 # Função para exibir o cabeçalho
 exibir_cabecalho() {
     clear
-    echo "--------------------------------------------------------"
-    echo_color -e "$BLUE" "      Sistema de restauração de dados de mídia!         "
-    echo "--------------------------------------------------------"
+    echo_color -e "$BLUE" "$(cat <<'EOF'
+ ___       _          __  __        _ _        ___        _               
+|   \ __ _| |_ __ _  |  \/  |___ __| (_)__ _  | _ \___ __| |_ ___ _ _ ___ 
+| |) / _` |  _/ _` | | |\/| / -_) _` | / _` | |   / -_|_-<  _/ _ \ '_/ -_)
+|___/\__,_|\__\__,_| |_|  |_\___\__,_|_\__,_| |_|_\___/__/\__\___/_| \___|
+--------------------------------------------------------------------------
+                Sistema de restauração de dados de mídia!          
+--------------------------------------------------------------------------
+EOF
+)"   
 }
 
 check_disk_space() {
@@ -93,12 +100,15 @@ check_disk_space() {
 	else
 		local disk="$WORKING_DIRECTORY"	
 	fi
+
     sudo mkdir -p "$disk"
+    #Calcula espaço disponível no disco
     local free_space=$(df --block-size=1 "$disk" | awk 'NR==2 {print $4}')
     local readable_free_space=$(df -h "$disk" | awk 'NR==2 {print $4}')
-	echo "tamanho em $disk"
-	echo "Espaço em $disk: $free_space"
-	echo "Espaço a ser utilizado em $disk: $readable_required_space em $readable_free_space"
+	
+    #echo "tamanho em $disk"	
+    echo "Espaço disponível: $readable_free_space | Necessário: $readable_required_space"
+
 
     if ((free_space < required_space)); then
         createlog "[ERROR] Espaço em disco insuficiente: $readable_free_space disponível. São necessários $readable_required_space." "$LOG_FILE"
@@ -106,14 +116,13 @@ check_disk_space() {
         echo_color -e "$YELLOW" "./clean.bash clean"
         exit 1
     else
-        createlog "[INFO] Espaço em disco local suficiente: $readable_free_space disponível." "$LOG_FILE"
-        echo "Espaço em disco local suficiente: $readable_free_space disponível."
+        createlog "[INFO] Espaço em disco local suficiente: $readable_free_space disponível." "$LOG_FILE"        
     fi
 }
 
 monta_device() {
 
-    echo "Montando o dispositivo $DEVICE em $MOUNT_POINT com o sistema de arquivos $FS_TYPE..."
+    createlog "[INFO] Montando o dispositivo $DEVICE em $MOUNT_POINT com o sistema de arquivos $FS_TYPE..." "$LOG_FILE"
 
     # Desmonta o ponto de montagem se já estiver montado
     if mountpoint -q "$MOUNT_POINT"; then
@@ -131,8 +140,9 @@ monta_device() {
             echo "$MOUNT_POINT já está montado."
         fi
     else
+        # Dispositivo não está montado. Montando...
+        
         opts=""
-		echo "Dispositivo não está montado. Montando..."
 		if is_wsl; then
 			opts=(-t drvfs)
 		fi  
@@ -140,6 +150,7 @@ monta_device() {
         # Monta o dispositivo no ponto de montagem
         cmd="sudo mount ${opts[*]} \"$DEVICE\" \"$MOUNT_POINT\""
         createlog "[DEBUG] Executando: $cmd" "$LOG_FILE"
+
         if sudo mount "${opts[@]}" "$DEVICE" "$MOUNT_POINT" >/dev/null 2>&1; then
             echo "Dispositivo $DEVICE montado com sucesso em $MOUNT_POINT."
         else
@@ -217,9 +228,9 @@ check_dvd() {
 
         echo_color -e "$YELLOW" "ATENÇÃO!!! DVD $DVD com UUID $DVD_UUID já foi registrado como lido/restaurado anteriormente neste cliente. Pressione q para sair ou aguarde para realizar a operação de cópia novamente..."
         echo_color -e "$YELLOW" "Pressione 'q' para sair do programa..."
-        echo_color -e "$YELLOW" "Pressione 'F' para enviar novamente[Force]..."
+        #echo_color -e "$YELLOW" "Pressione 'F' para enviar novamente[Force]..."
         echo_color -e "$YELLOW" "Pressione 'B' para realizar backup (ISO + cópia no DVD novo)..."
-        echo_color -e "$YELLOW" "Pressione 'L' para limpar registros deste DVD nesta máquina..."
+        #echo_color -e "$YELLOW" "Pressione 'L' para limpar registros deste DVD nesta máquina..."
 
         # Verificar se o usuário pressionou Enter para encerrar o programa
         read -r -s -n 1 -t 5 input
@@ -249,29 +260,45 @@ copy_from() {
         echo "Removendo diretório com erro anterior: $err_local"
         rm -rf -- "$err_local"
     fi
+
+
     copy_start_time=$(date +%s)
-    total_files=$(ls -1 "$MOUNT_POINT/product_raw/"*.RAW* 2>/dev/null | wc -l) #Busca o numero de arquivos RAW no DVD
+
+
+    # Conta arquivos .RAW no DVD
     find "$MOUNT_POINT/product_raw/" -type f -iname '*.RAW*' | sort > /tmp/total_dvd.txt
+    total_files=$(wc -l < /tmp/total_dvd.txt)    
+
     echo "Copiando dados do DVD($total_files encontrados)..."
-    #cp $MOUNT_POINT/product_raw/* .
+    #cp $MOUNT_POINT/product_raw/* .    
     createlog "[DEBUG] Executando: rsync -rh --info=progress2 --ignore-existing \"$MOUNT_POINT/product_raw/\" \"$local\"" "$LOG_FILE"
-    RSYNC_ERROR=$(rsync -rh --info=progress2 --ignore-existing "$MOUNT_POINT/product_raw/" "$local" 2>/dev/null) #Faz a cópia local do DVD     
-    if [ $? -eq 0 ]; then
+
+    # Executa cópia com rsync, captura erro (se houver)
+    if rsync -rh --info=progress2 --ignore-existing "$MOUNT_POINT/product_raw/" "$local" 2> /tmp/rsync_error.log; then
         copy_end_time=$(date +%s)
         copy_execution_time=$((copy_end_time - copy_start_time))
+
         createlog "[INFO] Cópia local do DVD realizada com sucesso de $DEVICE após $copy_execution_time s" "$LOG_FILE"
-        echo "DVD com UUID $DVD_UUID adicionado a lista de DVD's lidos."
+        echo "DVD com UUID $DVD_UUID adicionado à lista de DVDs lidos."
         echo "DVD:$dvd_number|UUID:$DVD_UUID|" >>"$READ_DVDS_FILE"
     else
         copy_end_time=$(date +%s)
         copy_execution_time=$((copy_end_time - copy_start_time))
-        total_dados=$(find "$local" -type f | wc -l)
-        createlog "[ERROR] A cópia $local foi mal-executada após $copy_execution_time s. $total_dados de $total_files foram copiados do DVD para o disco." "$LOG_FILE"
-        echo "[ERROR] rsync falhou com a seguinte mensagem:"
-        echo "$RSYNC_ERROR"
+        rsync_error=$(< /tmp/rsync_error.log)
+
+        # Conta quantos arquivos chegaram a ser copiados
+        total_copiados=$(find "$local" -type f 2>/dev/null | wc -l)
+
+        createlog "[ERROR] Cópia mal-executada após $copy_execution_time s. $total_copiados de $total_files foram copiados do DVD para o disco." "$LOG_FILE"
+        createlog "[ERROR] rsync falhou com a seguinte mensagem:"
+        createlog "[DEBUG] $rsync_error"
+        
+        # Move diretório para área de erro
         mv "$local" "$err_local" #Move a tentativa de leitura do DVD para a pasta ERR_DVD_UUID
         echo "Diretório renomeado para $err_local devido a falha/erro durante a cópia." 
-        echo_color -e "$RED" "Talvez a mídia ou o leitor de mídia estejam com problemas. Verifique se o erro persiste. Contate o TI para verificação."
+
+        echo_color -e "$RED" "Talvez a mídia ou o leitor estejam com problemas. Verifique se o erro persiste. Contate o TI."
+        
         exit 1
     fi
 }
@@ -280,6 +307,7 @@ catalog() {
     move_start_time=$(date +%s)
     echo -e "\n\nCatalogando os dados copiados localmente em $local. Aguarde..."    
     count=0
+    arquivos_vazios=0
     min_date=""
     max_date=""
     # Iterate over files in the subdir
@@ -293,6 +321,7 @@ catalog() {
         prod=""
         # Verifica se o arquivo não está vazio
         if [[ -s $fn ]]; then
+            #busca o cabeçalho no arquivo usando productx
             var=$(
                 /usr/local/bin/productx "$fn" <<EOF 2>/dev/null | awk '/What parameter do you wish to display?/ {exit} {print}'
 
@@ -310,6 +339,7 @@ EOF
                 continue
             fi
             gen_time=$(echo "$var" | grep "Ingest time:")
+            echo "Ingest time: $gen_time"
             dir=$(echo "$gen_time" | awk '{print $4 $5 $6}')
             dir=$(date -d "$dir 12" +%Y%m%d)
             ingest_date=$(echo "$gen_time" | awk '{print $4 "-" $5 "-" $6}')
@@ -349,23 +379,26 @@ EOF
             fi
         else
             #echo "Arquivo vazio: $fn"
-            ((count++))
+            ((arquivos_vazios++))
             rm -f $fn
         fi
     done
-    #Tratar mensagem de OK
-    #echo "OK"
+        
     TAG="$min_date <--> $max_date"
     FTAG="$min_date"_"$max_date"
     createlog "[INFO] Este DVD ($dvd_number) compreende o período $FTAG" "$LOG_FILE"
+
     move_end_time=$(date +%s)
     move_execution_time=$((move_end_time - move_start_time))
     createlog "[INFO] Tempo de catalogação ($move_execution_time s)" "$LOG_FILE"
     echo "Tempo de catalogação ($move_execution_time s)"
-    total_dados=$(find "$local" -type f | wc -l)
+
+    #Busca o numero total de arquivos copiados(catalogados)
+    total_catalogados=$(find "$local" -type f | wc -l)
     find "$local" -type f -name "*.RAW*" | sort > /tmp/total_local.txt
+
     createlog "[INFO] Total de arquivos no DVD: $total_files" "$LOG_FILE"
-    createlog "[INFO] Total de arquivos copiados: $total_dados" "$LOG_FILE"
+    createlog "[INFO] Total de arquivos catalogados: $total_catalogados. $arquivos_vazios arquivos vazios(descarte)." "$LOG_FILE"
     #Busca o número de arquivos classificados como indefinidos
     if [ -d "$local/indefinido" ]; then
         indefinidos=$(find "$local/indefinido" -type f | wc -l)
@@ -375,8 +408,10 @@ EOF
         echo_color -e "$BLUE" "Todos os arquivos foram classificados com sucesso."
     fi    
     # Verifica se o número de arquivos copiados é menor que o número total de arquivos no DVD
-    if [[ $total_files -gt $total_dados ]]; then
-        num_error_files=$((total_files - total_dados))
+    total_copiados=$((total_catalogados + $arquivos_vazios))
+
+    if [[ $total_files -gt $total_copiados ]]; then
+        num_error_files=$((total_files - total_copiados))
         # Verifica diferenças: arquivos que estão no DVD mas não foram copiados
         createlog "[DEBUG] Executando comando: 'comm -23   <(sort /tmp/total_dvd.txt | xargs -n1 basename | sort)   <(sort /tmp/total_local.txt | xargs -n1 basename | sort)'" "$LOG_FILE"
         missing_files=$(comm -23   <(sort /tmp/total_dvd.txt | xargs -n1 basename | sort)   <(sort /tmp/total_local.txt | xargs -n1 basename | sort))
@@ -386,6 +421,7 @@ EOF
             # Para cada linha (arquivo) em missing_files
             while IFS= read -r missing_file; do
                 createlog "[ERROR] $TAG | Arquivo faltando na cópia: $missing_file" "$LOG_DVD_FILES"
+                createlog "[ERROR] Cabeçalho do arquivo: $var" "$LOG_DVD_FILES"
             done <<< "$missing_files"
         else
             echo "✅ Todos os arquivos do DVD foram copiados com sucesso."
@@ -403,7 +439,7 @@ EOF
         echo "Enviando DVD $dvd_number para a storage..."
         ./sending_data.bash "$catalog/$FTAG" "$FTAG" "$dvd_number" > /dev/null && echo "" && echo_color -e "$YELLOW" "Upload DVD $dvd_number completo(com RESTRIÇÕES, confira $LOG_DVD_FILES. Execute a restauração da mídia backup.)" && echo "" &
     else
-        createlog "[INFO] $TAG | Dados catalogados com sucesso! $timestamp: $total_dados arquivos restaurados. $count arquivos vazios." "$LOG_FILE"
+        createlog "[INFO] $TAG | Dados catalogados com sucesso! $timestamp: $total_copiados arquivos restaurados. $count arquivos com erro de leitura. $arquivos_vazios arquivos vazios." "$LOG_FILE"
         catalog="$WORKING_DIRECTORY/catalog"
         mkdir -p $catalog
         echo "Movendo de $local para $catalog"
@@ -455,7 +491,6 @@ process_var() {
     local prod cidade folder
 
 
-
     # Determina o tipo de produto contido do dado bruto
     case "$var" in
     *SURVEI*)
@@ -497,6 +532,9 @@ process_var() {
     # Determine the folder
     if [[ "$cidade" == "indefinido" || "$prod" == "indefinido" ]]; then
         folder="indefinido"
+        echo "Classificação indefinida para o arquivo $fn. Verifique o cabeçalho do dado." >&2
+        #echo somente no terminal
+        echo "$var" >&2
     else
         folder="$prod$cidade/$dir"
     fi
