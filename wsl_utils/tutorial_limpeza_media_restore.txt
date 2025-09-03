@@ -1,0 +1,38 @@
+🧹 Tutorial de Limpeza da Máquina Virtual (media-restore)
+
+Passo 1 (dentro da WSL)
+Execute:
+./clean.bash clean
+👉 Esse comando apaga as pastas temporárias de DVDs que já foram copiadas para o servidor (seguro excluir).
+
+------------------------------------------------------------
+
+Passo 2 (ainda dentro da WSL)
+Rode:
+sudo rm -rf ~/.cache/*
+dd if=/dev/zero of=~/zero.fill bs=1M; rm ~/zero.fill
+
+- sudo rm -rf ~/.cache/* → limpa os arquivos de cache.
+- dd if=/dev/zero of=~/zero.fill bs=1M; rm ~/zero.fill → cria um arquivo cheio de zeros para ocupar o espaço livre e depois apaga; isso ajuda a compactar melhor o disco virtual.
+
+------------------------------------------------------------
+
+Passo 3
+1. Feche o terminal do WSL.
+2. No CMD ou PowerShell, rode:
+wsl --shutdown
+3. Agora otimize o disco:
+Optimize-VHD -Path "LOCAL DA IMAGEM DO WSL" -Mode Full
+
+------------------------------------------------------------
+
+Como encontrar a imagem VHDX do WSL
+Por padrão, o disco fica em:
+%LOCALAPPDATA%\Packages\CanonicalGroupLimited...<versão Ubuntu>\LocalState\ext4.vhdx
+
+Atalho:
+1. Abra o Explorador de Arquivos.
+2. Cole na barra:
+%LOCALAPPDATA%\Packages
+3. Procure a pasta do seu Ubuntu (CanonicalGroupLimited...).
+4. Entre em LocalState → o arquivo ext4.vhdx é a imagem do WSL.

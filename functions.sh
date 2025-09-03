@@ -338,8 +338,7 @@ EOF
                 rm -f "$fn"
                 continue
             fi
-            gen_time=$(echo "$var" | grep "Ingest time:")
-            echo "Ingest time: $gen_time"
+            gen_time=$(echo "$var" | grep "Ingest time:")            
             dir=$(echo "$gen_time" | awk '{print $4 $5 $6}')
             dir=$(date -d "$dir 12" +%Y%m%d)
             ingest_date=$(echo "$gen_time" | awk '{print $4 "-" $5 "-" $6}')

@@ -19,6 +19,14 @@ if [ -n "$2" ]; then
 fi
 # Executar a função apropriada com base no argumento
 case "$1" in
+wsl)
+    # Limpar cache e preparar ambiente WSL para OptimizeVHD
+    echo "Limpando cache e preparando ambiente WSL para OptimizeVHD..."
+    sudo rm -rf ~/.cache/*
+    dd if=/dev/zero of=~/zero.fill bs=1M
+    rm ~/zero.fill
+    echo "Cache limpo e ambiente preparado."
+    echo "Lembre-se de executar o comando Optimize-VHD no PowerShell do Windows:"
 clean)
     if [[ -z "$WORKING_DIRECTORY" || "$WORKING_DIRECTORY" == "/" || "$WORKING_DIRECTORY" == "." ]]; then
         echo "Erro: Diretório de trabalho inválido ou perigoso: '$WORKING_DIRECTORY'"

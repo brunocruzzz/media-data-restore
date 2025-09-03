@@ -15,15 +15,15 @@ Este repositório automatiza a restauração de backups a partir de mídias fís
 
 ### Dependências adicionais (instale conforme necessário)
 
-| Pacote       | Função                                    | Instalação (Ubuntu/Debian)           |
-|--------------|------------------------------------------|-------------------------------------|
-| rsync        | Cópia eficiente de arquivos               | `sudo apt install rsync`             |
-| tree         | Exibe estrutura de diretórios             | `sudo apt install tree`              |
-| eject        | Ejetar mídias físicas                      | `sudo apt install eject`             |
-| nfs-common   | Cliente NFS para montar diretórios remotos| `sudo apt install nfs-common`        |
-| util-linux   | blkid para UUID e LABEL de dispositivos   | `sudo apt install util-linux`        |
-| productx     | Leitura de metadados de arquivos RAW      | Copiar para `/usr/local/bin/` e dar permissão |
-| powershell.exe | Acesso ao PowerShell (apenas WSL)        | Incluído no Windows + WSL            |
+| Pacote          | Função                                     | Instalação (Ubuntu/Debian)                    |
+|-----------------|--------------------------------------------|-----------------------------------------------|
+| rsync           | Cópia eficiente de arquivos                | `sudo apt install rsync`                      |
+| tree            | Exibe estrutura de diretórios              | `sudo apt install tree`                       |
+| eject           | Ejetar mídias físicas                      | `sudo apt install eject`                      |
+| nfs-common      | Cliente NFS para montar diretórios remotos | `sudo apt install nfs-common`                 |
+| util-linux      | blkid para UUID e LABEL de dispositivos    | `sudo apt install util-linux`                 |
+| productx        | Leitura de metadados de arquivos RAW       | Copiar para `/usr/local/bin/` e dar permissão |
+| powershell.exe  | Acesso ao PowerShell (apenas WSL)          | Incluído no Windows + WSL                     |
 
 ---
 

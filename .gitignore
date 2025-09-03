@@ -13,3 +13,7 @@ log.txt
 
 # Ignoring all directories
 **/
+
+
+!wsl_utils/
+!wsl_utils/**
