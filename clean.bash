@@ -27,6 +27,7 @@ wsl)
     rm ~/zero.fill
     echo "Cache limpo e ambiente preparado."
     echo "Lembre-se de executar o comando Optimize-VHD no PowerShell do Windows:"
+    ;;
 clean)
     if [[ -z "$WORKING_DIRECTORY" || "$WORKING_DIRECTORY" == "/" || "$WORKING_DIRECTORY" == "." ]]; then
         echo "Erro: Diretório de trabalho inválido ou perigoso: '$WORKING_DIRECTORY'"
@@ -35,7 +36,7 @@ clean)
     echo "⚠️ ATENÇÃO. TODOS OS DADOS DENTRO DA PASTA $WORKING_DIRECTORY SERÂO PERDIDOS PERMANENTEMENTE!!!"    
     read -r -p "CONFIRMA EXCLUSÃO DOS DADOS? (S/N): " confirmation1
     if [[ $confirmation1 == "S" || $confirmation1 == "s" ]]; then        
-        read -r -p "TEM CERTEZA? ISSO NÃO PODE SER DESFEITO! (S/N)" confirmation2
+        read -r -p "TEM CERTEZA? ISSO NÃO PODE SER DESFEITO! (S/N): " confirmation2
         if [[ $confirmation2 == "S" || $confirmation2 == "s" ]]; then
             echo "Limpando o diretório de trabalho: $WORKING_DIRECTORY"
             rm -rf "$WORKING_DIRECTORY"
