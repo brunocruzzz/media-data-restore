@@ -270,6 +270,7 @@ copy_from() {
     total_files=$(wc -l < /tmp/total_dvd.txt)    
 
     echo "Copiando dados do DVD($total_files encontrados)..."
+    createlog "[INFO] Iniciando cópia local do DVD $dvd_number com UUID $DVD_UUID de $DEVICE. Total de arquivos a copiar: $total_files" "$LOG_DVD_FILES"
     #cp $MOUNT_POINT/product_raw/* .    
     createlog "[DEBUG] Executando: rsync -rh --info=progress2 --ignore-existing \"$MOUNT_POINT/product_raw/\" \"$local\"" "$LOG_FILE"
 
@@ -303,7 +304,31 @@ copy_from() {
     fi
 }
 catalog() {
-    local local=$1
+    local local="$1"
+    local no_delete=0
+    local no_upload=0
+
+    # Testa se foram passados argumentos adicionais (2º e 3º) e verifica flags
+    shift # remove o primeiro argumento (local)
+    for arg in "$@"; do
+        case "$arg" in
+            no-delete)
+                no_delete=1
+                ;;
+            no-upload)
+                no_upload=1
+                ;;
+        esac
+    done
+
+    # Escolhe o comando de movimentação: cp se no_delete=1, senão mv
+    local cmd_mov
+    if [[ $no_delete -eq 1 ]]; then
+        cmd_mov="cp"
+    else
+        cmd_mov="mv"
+    fi
+
     move_start_time=$(date +%s)
     echo -e "\n\nCatalogando os dados copiados localmente em $local. Aguarde..."    
     count=0
@@ -366,13 +391,20 @@ EOF
             #logo a estrutura fica como por exemplo, volppr/YYYMMDD/
             folder=$(process_var "$var" "$dir" "$fn" "$LOG_FILE")
             #Na pasta definida o arquivo RAW é movido.
+            
 
-            #echo "MOVENDO PARA $folder/$dir/$fn" # DEBUG CONTROL
+            if [[ "$var" == "vol" ]]; then
+                echo "Arquivo de volume scan detectado."
+                echo "MOVENDO PARA $folder/$dir/$fn" # DEBUG CONTROL
+            fi
+            createlog "[DEBUG] $dvd_number | Processando arquivo: $fn | Data de ingestão: $ingest_date | Diretório destino: $folder/$dir/$fn" "$LOG_DVD_FILES"
             #echo "movendo para $WORKING_DIRECTORY/local/$DVD_UUID/$folder/$fn"
 
             #Move o arquivo para o respectivo diretório para armazenamento
             #mkdir -p $WORKING_DIRECTORY/$folder && mv $fn $_
-            mkdir -p "$WORKING_DIRECTORY/local/$DVD_UUID/$folder" && mv -f "$fn" "$_"
+            #mkdir -p "$WORKING_DIRECTORY/local/$DVD_UUID/$folder" && $cmd_mov -f "$fn" "$_"
+            destination="$WORKING_DIRECTORY/local/$DVD_UUID/$folder"
+            mkdir -p "$destination" && $cmd_mov -f "$fn" "$destination"
             if [[ $? -ne 0 ]]; then                            
                 createlog "[ERROR] $dvd_number | Erro: Falha ao mover '$fn' para '$WORKING_DIRECTORY/local/$DVD_UUID/$folder/'" "$LOG_FILE"
             fi
@@ -435,8 +467,13 @@ EOF
             echo "Removendo diretório com erro anterior: $err_local"
             rm -rf -- "$err_local"
         fi
-        echo "Enviando DVD $dvd_number para a storage..."
-        ./sending_data.bash "$catalog/$FTAG" "$FTAG" "$dvd_number" > /dev/null && echo "" && echo_color -e "$YELLOW" "Upload DVD $dvd_number completo(com RESTRIÇÕES, confira $LOG_DVD_FILES. Execute a restauração da mídia backup.)" && echo "" &
+        # Caso contrário, chamamos script de upload se no_upload não estiver ligado
+        if [[ $no_upload -eq 0 ]]; then
+            echo "Enviando DVD $dvd_number para a storage..."
+            ./sending_data.bash "$catalog/$FTAG" "$FTAG" "$dvd_number" > /dev/null && echo "" && echo_color -e "$YELLOW" "Upload DVD $dvd_number completo(com RESTRIÇÕES, confira $LOG_DVD_FILES. Execute a restauração da mídia backup.)" && echo "" &
+        else
+            echo_color -e "$YELLOW" "Upload desabilitado (no-upload ativo)."
+        fi
     else
         createlog "[INFO] $TAG | Dados catalogados com sucesso! $timestamp: $total_copiados arquivos restaurados. $count arquivos com erro de leitura. $arquivos_vazios arquivos vazios." "$LOG_FILE"
         catalog="$WORKING_DIRECTORY/catalog"
@@ -448,8 +485,12 @@ EOF
             echo "Removendo diretório com erro anterior: $err_local"
             rm -rf -- "$err_local"
         fi
-        echo "Enviando DVD $dvd_number para a storage..."
-        ./sending_data.bash "$catalog/$FTAG" "$FTAG" "$dvd_number" > /dev/null && echo "" && echo_color -e "$GREEN" "Upload DVD $dvd_number completo" && echo "" &
+        if [[ $no_upload -eq 0 ]]; then
+            echo "Enviando DVD $dvd_number para a storage..."
+            ./sending_data.bash "$catalog/$FTAG" "$FTAG" "$dvd_number" > /dev/null && echo "" && echo_color -e "$GREEN" "Upload DVD $dvd_number completo" && echo "" &
+        else
+            echo_color -e "$YELLOW" "Upload desabilitado (no-upload ativo)."
+        fi
     fi
 }
 # Função para ejetar o dispositivo
@@ -489,9 +530,11 @@ process_var() {
     
     local prod cidade folder
 
+    # Extrair a linha que começa com 'Ingest site name'
+    header_file=$(echo "$var" | grep "^Site name:")
 
     # Determina o tipo de produto contido do dado bruto
-    case "$var" in
+    case "$header_file" in
     *SURVEI*)
         prod="sur" # Define produto como "SURVEILLANCE"
         ;;
@@ -514,7 +557,7 @@ process_var() {
     esac
 
     # Determine city of origin
-    case "$var" in
+    case "$header_file" in
     *[Bb]auru*)
         cidade="bru" # Classifica como dados provenientes de RADAR_BAURU
         ;;
