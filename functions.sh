@@ -535,6 +535,9 @@ process_var() {
     #header_file=$(echo "$var" | grep "^Site name:")
     header_file=$(echo "$var" | grep -E "^(Ingest site name|Site name:|PCO name:)")
 
+    # Ignora maiúsculas/minúsculas nas comparações do case
+    shopt -s nocasematch
+
     # Determina o tipo de produto contido do dado bruto
     case "$header_file" in
     *SURVEI*)
@@ -561,10 +564,10 @@ process_var() {
 
     # Determine city of origin
     case "$header_file" in
-    *[Bb]auru*)
+    *bauru*)
         cidade="bru" # Classifica como dados provenientes de RADAR_BAURU
         ;;
-    *[Pp]aulo* | *[Pp]rudente*)
+    *paulo* | *prudente*)
         cidade="ppr" # Classifica como dados provenientes de RADAR_PRUDENTE
         ;;
     *)
@@ -573,6 +576,10 @@ process_var() {
         #mv "$fn" "../indefinido"
         ;;
     esac
+
+    # Restaura comportamento padrão (opcional)
+    shopt -u nocasematch
+
 
     # Determine the folder
     if [[ "$cidade" == "indefinido" || "$prod" == "indefinido" ]]; then
