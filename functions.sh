@@ -387,17 +387,18 @@ EOF
             #Por exemplo: 
             #surveillances de Bauru são armazenados em surbru
             #volumescan de Prudente são armazenados em volppr
-            
+            header_file=$(echo "$var" | grep -E "^(Ingest site name|Site name:|PCO name:)")
             #logo a estrutura fica como por exemplo, volppr/YYYMMDD/
             folder=$(process_var "$var" "$dir" "$fn" "$LOG_FILE")
             #Na pasta definida o arquivo RAW é movido.
+                       
             
-
-            if [[ "$var" == "vol" ]]; then
-                echo "Arquivo de volume scan detectado."
-                echo "MOVENDO PARA $folder/$dir/$fn" # DEBUG CONTROL
-            fi
+            echo "MOVENDO PARA $folder/$dir/$fn" # DEBUG CONTROL
             createlog "[DEBUG] $dvd_number | Processando arquivo: $fn | Data de ingestão: $ingest_date | Diretório destino: $folder/$dir/$fn" "$LOG_DVD_FILES"
+            #testa se folder é 'indefinido'
+            if [[ "$folder" == "indefinido" ]]; then
+                createlog "[WARNING] $dvd_number | Arquivo '$fn' movido para pasta 'indefinido'.$header_file" "$LOG_DVD_FILES"
+            fi
             #echo "movendo para $WORKING_DIRECTORY/local/$DVD_UUID/$folder/$fn"
 
             #Move o arquivo para o respectivo diretório para armazenamento
@@ -469,7 +470,7 @@ EOF
         fi
         # Caso contrário, chamamos script de upload se no_upload não estiver ligado
         if [[ $no_upload -eq 0 ]]; then
-            echo "Enviando DVD $dvd_number para a storage..."
+            echo_color -e "$BLUE" "Enviando DVD $dvd_number para a storage..."
             ./sending_data.bash "$catalog/$FTAG" "$FTAG" "$dvd_number" > /dev/null && echo "" && echo_color -e "$YELLOW" "Upload DVD $dvd_number completo(com RESTRIÇÕES, confira $LOG_DVD_FILES. Execute a restauração da mídia backup.)" && echo "" &
         else
             echo_color -e "$YELLOW" "Upload desabilitado (no-upload ativo)."
@@ -486,7 +487,7 @@ EOF
             rm -rf -- "$err_local"
         fi
         if [[ $no_upload -eq 0 ]]; then
-            echo "Enviando DVD $dvd_number para a storage..."
+            echo_color -e "$BLUE" "Enviando DVD $dvd_number para a storage..."
             ./sending_data.bash "$catalog/$FTAG" "$FTAG" "$dvd_number" > /dev/null && echo "" && echo_color -e "$GREEN" "Upload DVD $dvd_number completo" && echo "" &
         else
             echo_color -e "$YELLOW" "Upload desabilitado (no-upload ativo)."
@@ -531,7 +532,8 @@ process_var() {
     local prod cidade folder
 
     # Extrair a linha que começa com 'Ingest site name'
-    header_file=$(echo "$var" | grep "^Site name:")
+    #header_file=$(echo "$var" | grep "^Site name:")
+    header_file=$(echo "$var" | grep -E "^(Ingest site name|Site name:|PCO name:)")
 
     # Determina o tipo de produto contido do dado bruto
     case "$header_file" in
@@ -541,7 +543,7 @@ process_var() {
     *VOL_SCAN* | *VSCAN* | *PPI_VOL* | *CLUTTER*)
         prod="vol" # Define produto como "VOLUME SCAN"
         ;;
-    *CLEAR* | *AIR*)
+    *CLEAR* | *AIR* | *DURATEX*)
         prod="cle" # Define produto como "CLEAR"
         ;;
     *QUEIMA* | *FIRE*)
@@ -553,6 +555,7 @@ process_var() {
     *)
         prod="indefinido" # Define produto como "indefinido" --> Serão manipulados pelo técnico para encontrar o possível erro de classificação
         createlog "[WARNING] $fn: Problemas ao encontrar o rótulo de identificação do dado." "$LOG_FILE"
+        createlog "[WARNING] Cabeçalho do arquivo: $header_file" "$LOG_FILE"
         ;;
     esac
 
